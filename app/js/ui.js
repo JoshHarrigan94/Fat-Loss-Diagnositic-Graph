@@ -2,19 +2,22 @@
  * ui.js
  *
  * Presentation helpers for the iPad-first interface.
- *
- * Purpose:
- * - Keep HTML rendering out of app.js
- * - Render diagnosis, metrics, graph pathways, prediction and debug views
- * - Make the UI layer replaceable without touching the engine
  */
+
+import { createSubgraphForDiagnosis } from "../../graph/graphEngine.js";
+import { renderGraphSvg } from "../../graph/graphRenderer.js";
 
 export function renderDashboard(result) {
   const root = document.querySelector("#app");
 
   if (!root) return;
 
-  const { report, analytics, diagnoses, prediction } = result;
+  const { report, analytics, diagnoses, prediction, graph } = result;
+
+  const subgraph = createSubgraphForDiagnosis(
+    graph,
+    report.diagnosis.id
+  );
 
   root.innerHTML = `
     <section class="shell">
@@ -22,6 +25,7 @@ export function renderDashboard(result) {
       ${renderCoreMetrics(report)}
       ${renderPredictionMetrics(prediction)}
       ${renderDiagnosticGrid(report, diagnoses)}
+      ${renderGraphPanel(subgraph)}
       ${renderRecommendation(report)}
       ${renderSignalAudit(analytics)}
     </section>
@@ -83,14 +87,27 @@ export function renderDiagnosticGrid(report, diagnoses) {
 
       <article class="panel">
         <div class="section-title">
-          <h2>Knowledge graph pathways</h2>
-          <span>Explainability layer</span>
+          <h2>Graph pathways</h2>
+          <span>Reasoning route</span>
         </div>
 
         <ul class="path-list">
           ${report.graphPaths.map((path) => `<li>${escapeHtml(path)}</li>`).join("")}
         </ul>
       </article>
+    </section>
+  `;
+}
+
+export function renderGraphPanel(subgraph) {
+  return `
+    <section class="panel graph-panel">
+      <div class="section-title">
+        <h2>Knowledge graph</h2>
+        <span>Diagnosis subgraph</span>
+      </div>
+
+      ${renderGraphSvg(subgraph)}
     </section>
   `;
 }
