@@ -13,36 +13,130 @@ export const SIGNAL_TO_GRAPH_NODES = {
   weakDeficit: ["energy_balance"],
 
   weightTrendFlat: ["weight_trend", "plateau", "mismatch"],
-  weightVolatilityHigh: ["weight_volatility", "water_retention", "masked_fat_loss"],
-  possibleMasking: ["water_retention", "masked_fat_loss"],
+  weightVolatilityHigh: [
+    "weight_volatility",
+    "water_retention",
+    "masked_fat_loss"
+  ],
+  possibleMasking: [
+    "water_retention",
+    "masked_fat_loss",
+    "recovery_water_retention",
+    "dietary_water_retention"
+  ],
 
-  sleepPoor: ["sleep", "sleep_quality", "recovery", "recovery_masking"],
-  trainingLoadHigh: ["training_load", "recovery", "water_retention"],
+  sleepPoor: [
+    "sleep",
+    "sleep_quality",
+    "poor_sleep_recovery",
+    "recovery",
+    "recovery_masking",
+    "recovery_water_retention"
+  ],
 
-  calorieVariabilityHigh: ["adherence", "logging_accuracy", "adherence_drift"],
-  weekendCaloriesHigher: ["weekend_drift", "adherence_drift"],
-  proteinLow: ["protein", "adherence"],
+  trainingLoadHigh: [
+    "training_load",
+    "training_inflammation",
+    "recovery",
+    "water_retention",
+    "recovery_water_retention"
+  ],
 
-  stepsDropped: ["steps", "neet", "reduced_expenditure"],
-  weightDropping: ["weight_trend", "fat_loss"]
+  calorieVariabilityHigh: [
+    "adherence",
+    "logging_accuracy",
+    "adherence_drift"
+  ],
+
+  weekendCaloriesHigher: [
+    "weekend_drift",
+    "adherence_drift"
+  ],
+
+  proteinLow: [
+    "protein",
+    "adherence"
+  ],
+
+  stepsDropped: [
+    "steps",
+    "neet",
+    "reduced_expenditure"
+  ],
+
+  weightDropping: [
+    "weight_trend",
+    "fat_loss"
+  ],
+
+  carbsHighOrVariable: [
+    "carbs",
+    "carbohydrate_shift",
+    "glycogen",
+    "dietary_water_retention"
+  ],
+
+  sodiumHighOrVariable: [
+    "sodium_intake",
+    "dietary_water_retention",
+    "water_retention"
+  ],
+
+  alcoholDetected: [
+    "alcohol_intake",
+    "sleep_quality",
+    "dietary_water_retention"
+  ],
+
+  stressHigh: [
+    "stress_load",
+    "recovery",
+    "recovery_water_retention"
+  ],
+
+  illnessDetected: [
+    "illness_inflammation",
+    "recovery_water_retention",
+    "water_retention"
+  ],
+
+  gutLoadHigh: [
+    "gut_content_load",
+    "gut_content",
+    "scale_weight"
+  ]
 };
 
 export const DIAGNOSIS_MECHANISM_WEIGHTS = {
   masked_fat_loss: {
-    water_retention: 4,
-    weight_volatility: 4,
+    water_retention: 5,
+    weight_volatility: 5,
+    recovery_water_retention: 4,
+    dietary_water_retention: 4,
     recovery: 3,
-    glycogen: 2,
+    glycogen: 3,
+    carbohydrate_shift: 3,
+    sodium_intake: 3,
     gut_content: 2,
+    gut_content_load: 2,
+    training_inflammation: 3,
+    poor_sleep_recovery: 3,
+    stress_load: 2,
+    illness_inflammation: 2,
     mismatch: 3,
     weight_trend: 2
   },
 
   recovery_masking: {
-    recovery: 4,
+    recovery: 5,
+    recovery_water_retention: 5,
+    poor_sleep_recovery: 4,
     sleep: 3,
     sleep_quality: 3,
     training_load: 3,
+    training_inflammation: 4,
+    stress_load: 3,
+    illness_inflammation: 3,
     water_retention: 3,
     weight_volatility: 2
   },
