@@ -449,3 +449,92 @@ body {
   cursor: pointer;
   font-size: 15px;
 }
+
+/* Enhancement block: ML, timeline and graph reasoning */
+
+.metrics-grid.compact {
+  margin-top: 18px;
+  margin-bottom: 22px;
+}
+
+.section-title.nested {
+  margin-top: 24px;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.timeline-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: #ffffff99;
+  border: 1px solid var(--border);
+}
+
+.timeline-item h3 {
+  margin: 6px 0;
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.timeline-item p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.timeline-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 190px;
+  text-align: right;
+}
+
+.timeline-metrics span {
+  display: inline-flex;
+  justify-content: flex-end;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.path-list strong {
+  color: var(--accent);
+}
+
+.panel h2 {
+  letter-spacing: -0.04em;
+}
+
+.primary-button:hover,
+.upload-button:hover {
+  filter: brightness(0.96);
+}
+
+.metric-card {
+  min-height: 118px;
+}
+
+.metric-card strong {
+  word-break: break-word;
+}
+
+@media (max-width: 760px) {
+  .timeline-item {
+    flex-direction: column;
+  }
+
+  .timeline-metrics {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .timeline-metrics span {
+    justify-content: flex-start;
+  }
+}
