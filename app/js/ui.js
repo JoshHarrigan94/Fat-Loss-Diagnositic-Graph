@@ -26,6 +26,10 @@ export function renderDashboard(result, actions = {}) {
     markdown,
     timelineSummary,
     rankedExplanationChains,
+    activeGraphNodes,
+    competingExplanations,
+    interventionExplanation,
+    graphReasoningSummary,
     rawRows,
     chartData,
     importSummary,
@@ -51,6 +55,10 @@ export function renderDashboard(result, actions = {}) {
       ${renderRegressionPanel(regressionPrediction, regressionModel)}
       ${renderTimelinePanel(timelineSummary)}
       ${renderDiagnosticGrid(report, diagnoses)}
+      ${renderGraphReasoningSummary(graphReasoningSummary)}
+      ${renderCompetingExplanations(competingExplanations)}
+      ${renderActiveMechanisms(activeGraphNodes)}
+      ${renderInterventions(interventionExplanation)}
       ${renderGraphReasoningPanel(rankedExplanationChains)}
       ${renderGraphPanel(subgraph)}
       ${renderRecommendation(report)}
@@ -491,11 +499,116 @@ function renderDiagnosticGrid(report, diagnoses) {
   `;
 }
 
+function renderGraphReasoningSummary(graphReasoningSummary) {
+  if (!graphReasoningSummary) return "";
+
+  return `
+    <section class="panel graph-utility-panel">
+      <div class="section-title">
+        <h2>Graph reasoning summary</h2>
+        <span>Active causal interpretation</span>
+      </div>
+
+      <p class="summary small">${escapeHtml(graphReasoningSummary.narrative)}</p>
+    </section>
+  `;
+}
+
+function renderCompetingExplanations(competingExplanations = []) {
+  return `
+    <section class="panel graph-utility-panel">
+      <div class="section-title">
+        <h2>Competing explanations</h2>
+        <span>Rule + graph ranking</span>
+      </div>
+
+      <div class="explanation-list">
+        ${
+          competingExplanations.length
+            ? competingExplanations
+                .map(
+                  (item) => `
+                    <article class="explanation-card">
+                      <div>
+                        <p class="eyebrow">Rank ${item.rank}</p>
+                        <h3>${escapeHtml(item.title)}</h3>
+                        <p>${escapeHtml(item.explanation)}</p>
+                      </div>
+
+                      <div class="score-stack">
+                        <span>${item.combinedScore}</span>
+                        <small>combined</small>
+                      </div>
+                    </article>
+                  `
+                )
+                .join("")
+            : "<p class='summary small'>No competing explanations available.</p>"
+        }
+      </div>
+    </section>
+  `;
+}
+
+function renderActiveMechanisms(activeGraphNodes = []) {
+  return `
+    <section class="panel graph-utility-panel">
+      <div class="section-title">
+        <h2>Active graph mechanisms</h2>
+        <span>${activeGraphNodes.length} active</span>
+      </div>
+
+      <div class="mechanism-tags">
+        ${
+          activeGraphNodes.length
+            ? activeGraphNodes
+                .map((node) => `<span>${escapeHtml(formatLabel(node))}</span>`)
+                .join("")
+            : "<span>No active mechanisms</span>"
+        }
+      </div>
+    </section>
+  `;
+}
+
+function renderInterventions(interventionExplanation) {
+  const interventions = interventionExplanation?.interventions || [];
+
+  return `
+    <section class="panel graph-utility-panel">
+      <div class="section-title">
+        <h2>Intervention levers</h2>
+        <span>What would change the diagnosis?</span>
+      </div>
+
+      <p class="summary small">${escapeHtml(interventionExplanation?.summary || "")}</p>
+
+      <div class="intervention-grid">
+        ${
+          interventions.length
+            ? interventions
+                .map(
+                  (item) => `
+                    <article class="intervention-card">
+                      <h3>${escapeHtml(item.lever)}</h3>
+                      <p>${escapeHtml(item.rationale)}</p>
+                      <span>Risk: ${escapeHtml(item.risk)}</span>
+                    </article>
+                  `
+                )
+                .join("")
+            : "<p class='summary small'>No interventions mapped.</p>"
+        }
+      </div>
+    </section>
+  `;
+}
+
 function renderGraphReasoningPanel(rankedExplanationChains = []) {
   return `
     <section class="panel">
       <div class="section-title">
-        <h2>Graph reasoning</h2>
+        <h2>Graph pathway explorer</h2>
         <span>Ranked explanation chains</span>
       </div>
 
