@@ -11,6 +11,7 @@ import { parseCSV } from "../../data/importer.js";
 
 import { analyseTrends } from "../../analytics/trends.js";
 import { analyseAdherence } from "../../analytics/adherence.js";
+import { analyseDeficit } from "../../analytics/deficit.js";
 
 import { evaluateRules } from "../../rules/diagnosticEngine.js";
 
@@ -50,11 +51,12 @@ export async function runDiagnosticEngine() {
   const rawRows = parseCSV(csvText);
 
   const analytics = analyseTrends(rawRows, USER_CONFIG);
-
   const adherence = analyseAdherence(rawRows, USER_CONFIG);
+  const deficit = analyseDeficit(rawRows, USER_CONFIG);
 
   const enrichedSignals = {
     ...analytics.signals,
+    ...deficit.flags,
 
     calorieVariabilityHigh:
       analytics.signals.calorieVariabilityHigh ||
@@ -72,6 +74,7 @@ export async function runDiagnosticEngine() {
   const enrichedAnalytics = {
     ...analytics,
     adherence,
+    deficit,
     signals: enrichedSignals
   };
 
@@ -95,6 +98,7 @@ export async function runDiagnosticEngine() {
   logDiagnostics({
     analytics: enrichedAnalytics,
     adherence,
+    deficit,
     diagnoses,
     graph,
     prediction,
@@ -106,6 +110,7 @@ export async function runDiagnosticEngine() {
     rawRows,
     analytics: enrichedAnalytics,
     adherence,
+    deficit,
     diagnoses,
     graph,
     prediction,
@@ -137,6 +142,7 @@ async function loadText(path) {
 function logDiagnostics({
   analytics,
   adherence,
+  deficit,
   diagnoses,
   graph,
   prediction,
@@ -146,6 +152,7 @@ function logDiagnostics({
   console.log("Graph summary:", printGraphSummary(graph));
   console.log("Analytics:", analytics);
   console.log("Adherence:", adherence);
+  console.log("Deficit:", deficit);
   console.log("Diagnoses:", diagnoses);
   console.log("Prediction:", prediction);
 
