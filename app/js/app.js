@@ -65,6 +65,15 @@ import { evaluateRegressionModel } from "../../ml/modelEvaluation.js";
 import { compareModels } from "../../ml/modelComparison.js";
 
 import {
+  runInterventionSimulation
+} from "../../simulation/interventionSimulator.js";
+
+import {
+  generateSimulationSummary,
+  simulationSummaryToMarkdown
+} from "../../reports/simulationReport.js";
+
+import {
   generateDiagnosticReport,
   reportToMarkdown,
   reportToConsole
@@ -312,6 +321,15 @@ export function runDiagnosticFromRows(rawRows, resources) {
   const timelineSummary = generateTimelineSummary(timeline);
   const chartData = buildChartData(rawRows, timeline);
 
+  const simulations = runInterventionSimulation({
+    rows: rawRows,
+    baselineAnalytics: analytics,
+    baselineDiagnosis: diagnoses[0],
+    options: USER_CONFIG
+  });
+
+  const simulationSummary = generateSimulationSummary(simulations);
+
   const report = generateDiagnosticReport({
     analytics,
     diagnoses,
@@ -322,7 +340,8 @@ export function runDiagnosticFromRows(rawRows, resources) {
     reportToMarkdown(report),
     timelineSummaryToMarkdown(timelineSummary),
     graphReasoningToMarkdown(graphReasoningSummary),
-    mlSummaryToMarkdown(mlSummary)
+    mlSummaryToMarkdown(mlSummary),
+    simulationSummaryToMarkdown(simulationSummary)
   ].join("\n\n---\n\n");
 
   logDiagnostics({
@@ -349,6 +368,8 @@ export function runDiagnosticFromRows(rawRows, resources) {
     timeline,
     timelineSummary,
     chartData,
+    simulations,
+    simulationSummary,
     report,
     markdown
   });
@@ -378,6 +399,8 @@ export function runDiagnosticFromRows(rawRows, resources) {
     timeline,
     timelineSummary,
     chartData,
+    simulations,
+    simulationSummary,
     report,
     markdown
   };
@@ -452,6 +475,8 @@ function logDiagnostics(payload) {
   console.log("Timeline:", payload.timeline);
   console.log("Timeline summary:", payload.timelineSummary);
   console.log("Chart data:", payload.chartData);
+  console.log("Simulations:", payload.simulations);
+  console.log("Simulation summary:", payload.simulationSummary);
 
   reportToConsole(payload.report);
 
