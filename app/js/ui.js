@@ -1,6 +1,7 @@
 import { createSubgraphForDiagnosis } from "../../graph/graphEngine.js";
 import { renderGraphSvg } from "../../graph/graphRenderer.js";
 import { downloadMarkdownReport } from "../../reports/downloadReport.js";
+import { getTodayDateString } from "./dataEntry.js";
 
 export function renderDashboard(result, actions = {}) {
   const root = document.querySelector("#app");
@@ -20,8 +21,11 @@ export function renderDashboard(result, actions = {}) {
     markdown,
     timelineSummary,
     rankedExplanationChains,
+    rawRows,
     importSummary,
-    importWarnings
+    importWarnings,
+    entryErrors,
+    entrySuccess
   } = result;
 
   const subgraph = createSubgraphForDiagnosis(graph, report.diagnosis.id);
@@ -30,6 +34,8 @@ export function renderDashboard(result, actions = {}) {
     <section class="shell">
       ${renderHero(report)}
       ${renderUploadPanel(importSummary, importWarnings)}
+      ${renderManualEntryPanel(entryErrors, entrySuccess)}
+      ${renderDataTable(rawRows)}
       ${renderCoreMetrics(report)}
       ${renderWeightSignalMetrics(weightSignal)}
       ${renderDeficitMetrics(deficit)}
@@ -52,6 +58,9 @@ export function renderDashboard(result, actions = {}) {
 function bindEvents(actions, markdown) {
   const upload = document.querySelector("#csv-upload");
   const download = document.querySelector("#download-report");
+  const exportCsv = document.querySelector("#export-csv");
+  const resetData = document.querySelector("#reset-data");
+  const saveEntry = document.querySelector("#save-entry");
 
   if (upload && actions.onCsvUpload) {
     upload.addEventListener("change", (event) => {
@@ -65,6 +74,33 @@ function bindEvents(actions, markdown) {
       downloadMarkdownReport(markdown);
     });
   }
+
+  if (exportCsv && actions.onExportCsv) {
+    exportCsv.addEventListener("click", actions.onExportCsv);
+  }
+
+  if (resetData && actions.onResetData) {
+    resetData.addEventListener("click", actions.onResetData);
+  }
+
+  if (saveEntry && actions.onSaveEntry) {
+    saveEntry.addEventListener("click", actions.onSaveEntry);
+  }
+
+  document.querySelectorAll("[data-delete-date]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const date = button.getAttribute("data-delete-date");
+      if (actions.onDeleteEntry) actions.onDeleteEntry(date);
+    });
+  });
+
+  document.querySelectorAll("[data-edit-row]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const payload = JSON.parse(button.getAttribute("data-edit-row"));
+      fillEntryForm(payload);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
 }
 
 function renderHero(report) {
@@ -97,7 +133,7 @@ function renderUploadPanel(importSummary, importWarnings = []) {
         ${
           importSummary
             ? `<p class="upload-summary">Imported ${importSummary.totalRows} rows from ${escapeHtml(importSummary.firstDate)} to ${escapeHtml(importSummary.lastDate)}.</p>`
-            : `<p class="upload-summary">Currently using demo data.</p>`
+            : `<p class="upload-summary">Currently using saved or demo data.</p>`
         }
 
         ${
@@ -112,6 +148,126 @@ function renderUploadPanel(importSummary, importWarnings = []) {
         <input id="csv-upload" type="file" accept=".csv,text/csv" />
       </label>
     </section>
+  `;
+}
+
+function renderManualEntryPanel(entryErrors = [], entrySuccess = "") {
+  const today = getTodayDateString();
+
+  return `
+    <section class="panel data-entry-panel">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Manual entry</p>
+          <h2>Add or edit daily data</h2>
+        </div>
+        <span>Saved locally in browser</span>
+      </div>
+
+      ${
+        entrySuccess
+          ? `<p class="success-message">${escapeHtml(entrySuccess)}</p>`
+          : ""
+      }
+
+      ${
+        entryErrors?.length
+          ? `<ul class="error-list">${entryErrors.map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul>`
+          : ""
+      }
+
+      <div class="entry-grid">
+        ${inputField("date", "Date", "date", today)}
+        ${inputField("bodyweight_kg", "Bodyweight kg", "number", "", "0.1")}
+        ${inputField("calories", "Calories", "number")}
+        ${inputField("protein_g", "Protein g", "number")}
+        ${inputField("carbs_g", "Carbs g", "number")}
+        ${inputField("fat_g", "Fat g", "number")}
+        ${inputField("steps", "Steps", "number")}
+        ${inputField("sleep_hours", "Sleep hours", "number", "", "0.1")}
+        ${inputField("sleep_quality", "Sleep quality 1–5", "number", "", "0.5")}
+        ${inputField("training_load", "Training load 1–10", "number", "", "0.5")}
+      </div>
+
+      <div class="entry-actions">
+        <button id="save-entry" class="primary-button">Save date</button>
+        <button id="export-csv" class="secondary-button">Export CSV</button>
+        <button id="reset-data" class="secondary-button danger">Reset demo data</button>
+      </div>
+    </section>
+  `;
+}
+
+function inputField(name, label, type = "text", value = "", step = "1") {
+  return `
+    <label class="entry-field">
+      <span>${escapeHtml(label)}</span>
+      <input
+        name="${escapeHtml(name)}"
+        type="${escapeHtml(type)}"
+        value="${escapeHtml(value)}"
+        ${type === "number" ? `step="${escapeHtml(step)}"` : ""}
+      />
+    </label>
+  `;
+}
+
+function renderDataTable(rows = []) {
+  const recentRows = [...rows]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 14);
+
+  return `
+    <section class="panel data-table-panel">
+      <div class="section-title">
+        <h2>Recent entries</h2>
+        <span>${rows.length} total rows</span>
+      </div>
+
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Weight</th>
+              <th>Calories</th>
+              <th>Protein</th>
+              <th>Steps</th>
+              <th>Sleep</th>
+              <th>Load</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              recentRows.length
+                ? recentRows.map(renderDataRow).join("")
+                : `<tr><td colspan="8">No rows yet.</td></tr>`
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function renderDataRow(row) {
+  const safePayload = escapeHtml(JSON.stringify(row));
+
+  return `
+    <tr>
+      <td>${escapeHtml(row.date)}</td>
+      <td>${format(row.bodyweight_kg)} kg</td>
+      <td>${format(row.calories, 0)}</td>
+      <td>${format(row.protein_g, 0)}g</td>
+      <td>${format(row.steps, 0)}</td>
+      <td>${format(row.sleep_hours)}h</td>
+      <td>${format(row.training_load)}</td>
+      <td class="table-actions">
+        <button class="tiny-button" data-edit-row="${safePayload}">Edit</button>
+        <button class="tiny-button danger" data-delete-date="${escapeHtml(row.date)}">Delete</button>
+      </td>
+    </tr>
   `;
 }
 
@@ -216,9 +372,7 @@ function renderRegressionPanel(regressionPrediction, regressionModel) {
 }
 
 function renderTimelinePanel(timelineSummary) {
-  if (!timelineSummary?.available) {
-    return "";
-  }
+  if (!timelineSummary?.available) return "";
 
   return `
     <section class="panel">
@@ -364,6 +518,13 @@ export function renderError(error) {
   `;
 }
 
+function fillEntryForm(row) {
+  Object.entries(row).forEach(([key, value]) => {
+    const input = document.querySelector(`[name="${key}"]`);
+    if (input) input.value = value;
+  });
+}
+
 function metricCard(label, value) {
   return `
     <article class="metric-card">
@@ -374,7 +535,7 @@ function metricCard(label, value) {
 }
 
 function format(value, decimals = 2) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
   return Number(value).toFixed(decimals);
 }
 
@@ -385,7 +546,7 @@ function formatLabel(value) {
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
