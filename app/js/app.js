@@ -61,6 +61,9 @@ import {
   predictWithRegressionModel
 } from "../../ml/regressionModel.js";
 
+import { evaluateRegressionModel } from "../../ml/modelEvaluation.js";
+import { compareModels } from "../../ml/modelComparison.js";
+
 import {
   generateDiagnosticReport,
   reportToMarkdown,
@@ -76,6 +79,11 @@ import {
   generateGraphReasoningSummary,
   graphReasoningToMarkdown
 } from "../../reports/graphReasoningReport.js";
+
+import {
+  generateMLSummary,
+  mlSummaryToMarkdown
+} from "../../reports/mlReport.js";
 
 let appResources = null;
 let currentRows = [];
@@ -237,6 +245,20 @@ export function runDiagnosticFromRows(rawRows, resources) {
     USER_CONFIG
   );
 
+  const modelEvaluation = evaluateRegressionModel(regressionModel);
+
+  const modelComparison = compareModels({
+    baselinePrediction: prediction,
+    regressionPrediction,
+    modelEvaluation
+  });
+
+  const mlSummary = generateMLSummary({
+    regressionPrediction,
+    modelEvaluation,
+    modelComparison
+  });
+
   const graphScores = scoreGraphPathways({
     graph,
     signals: analytics.signals,
@@ -299,7 +321,8 @@ export function runDiagnosticFromRows(rawRows, resources) {
   const markdown = [
     reportToMarkdown(report),
     timelineSummaryToMarkdown(timelineSummary),
-    graphReasoningToMarkdown(graphReasoningSummary)
+    graphReasoningToMarkdown(graphReasoningSummary),
+    mlSummaryToMarkdown(mlSummary)
   ].join("\n\n---\n\n");
 
   logDiagnostics({
@@ -312,6 +335,9 @@ export function runDiagnosticFromRows(rawRows, resources) {
     prediction,
     regressionModel,
     regressionPrediction,
+    modelEvaluation,
+    modelComparison,
+    mlSummary,
     graphScores,
     topGraphPathway,
     activeGraphNodes,
@@ -338,6 +364,9 @@ export function runDiagnosticFromRows(rawRows, resources) {
     prediction,
     regressionModel,
     regressionPrediction,
+    modelEvaluation,
+    modelComparison,
+    mlSummary,
     graphScores,
     topGraphPathway,
     activeGraphNodes,
@@ -409,6 +438,9 @@ function logDiagnostics(payload) {
   console.log("Prediction:", payload.prediction);
   console.log("Regression model:", payload.regressionModel);
   console.log("Regression prediction:", payload.regressionPrediction);
+  console.log("Model evaluation:", payload.modelEvaluation);
+  console.log("Model comparison:", payload.modelComparison);
+  console.log("ML summary:", payload.mlSummary);
   console.log("Graph scores:", payload.graphScores);
   console.log("Top graph pathway:", payload.topGraphPathway);
   console.log("Active graph nodes:", payload.activeGraphNodes);
