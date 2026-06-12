@@ -538,3 +538,139 @@ body {
     justify-content: flex-start;
   }
 }
+
+/* Manual entry + local data management */
+
+.data-entry-panel {
+  margin-bottom: 24px;
+}
+
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.entry-field {
+  display: grid;
+  gap: 8px;
+}
+
+.entry-field span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.entry-field input {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+.entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.secondary-button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 15px 22px;
+  background: white;
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.secondary-button.danger,
+.tiny-button.danger {
+  color: #b13d32;
+}
+
+.success-message {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #e8f5ed;
+  color: #256b49;
+  font-weight: 800;
+}
+
+.error-list {
+  padding-left: 22px;
+  color: #b13d32;
+  font-weight: 700;
+}
+
+.data-table-panel {
+  margin-bottom: 24px;
+}
+
+.data-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 13px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 14px;
+}
+
+.data-table th {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tiny-button {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+  .entry-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .entry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .entry-actions {
+    flex-direction: column;
+  }
+
+  .entry-actions button {
+    width: 100%;
+  }
+}
