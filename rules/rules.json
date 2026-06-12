@@ -166,4 +166,62 @@
     ],
     "recommendation": "If this persists for another 7–14 days, consider a small calorie reduction or activity increase."
   }
+  
+  ,
+{
+  "id": "recovery_driven_water_retention",
+  "diagnosisId": "recovery_water_retention",
+  "title": "Recovery-driven water retention likely",
+  "summary": "Scale weight may be masked by recovery stress from poor sleep, high training load, inflammation or stress load.",
+  "priority": 2,
+  "conditions": [
+    {
+      "metric": "weightVolatilityHigh",
+      "operator": "equals",
+      "value": true
+    },
+    {
+      "metric": "sleepPoor",
+      "operator": "equals",
+      "value": true
+    },
+    {
+      "metric": "trainingLoadHigh",
+      "operator": "equals",
+      "value": true
+    }
+  ],
+  "evidence": [
+    "Weight volatility is elevated.",
+    "Sleep is below the target range.",
+    "Training load is elevated.",
+    "This pattern supports recovery-driven water retention rather than immediate deficit failure."
+  ],
+  "recommendation": "Hold calories steady, prioritise sleep recovery, and reduce unnecessary training fatigue for 7 days before cutting calories."
+},
+{
+  "id": "dietary_water_retention_possible",
+  "diagnosisId": "dietary_water_retention",
+  "title": "Dietary water retention possible",
+  "summary": "Scale weight may be distorted by carbohydrate, sodium, alcohol or digestive-content changes.",
+  "priority": 3,
+  "conditions": [
+    {
+      "metric": "weightVolatilityHigh",
+      "operator": "equals",
+      "value": true
+    },
+    {
+      "metric": "calorieVariabilityHigh",
+      "operator": "equals",
+      "value": true
+    }
+  ],
+  "evidence": [
+    "Weight volatility is elevated.",
+    "Calorie intake is inconsistent.",
+    "Inconsistent intake can also imply inconsistent carbohydrate, sodium or food volume."
+  ],
+  "recommendation": "Keep calories, carbohydrate, sodium and food volume more consistent for 7 days before changing the deficit."
+}
 ]
