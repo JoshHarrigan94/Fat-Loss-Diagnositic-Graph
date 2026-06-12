@@ -320,3 +320,63 @@ body {
     font-size: 26px;
   }
 }
+
+.graph-panel {
+  margin-bottom: 24px;
+}
+
+.graph-canvas {
+  width: 100%;
+  min-height: 420px;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: #f0ebe4;
+  border: 1px solid var(--border);
+}
+
+.graph-canvas svg {
+  width: 100%;
+  min-width: 760px;
+  height: 420px;
+}
+
+.graph-edge {
+  stroke: #bfb5a8;
+  stroke-width: 3;
+}
+
+.graph-canvas marker path {
+  fill: #bfb5a8;
+}
+
+.graph-node rect {
+  fill: white;
+  stroke: #d8cec1;
+  stroke-width: 2;
+}
+
+.graph-node text {
+  font-size: 14px;
+  font-weight: 800;
+  fill: var(--text);
+}
+
+.graph-node-diagnosis rect {
+  fill: var(--panel-dark);
+  stroke: var(--panel-dark);
+}
+
+.graph-node-diagnosis text {
+  fill: white;
+}
+
+.graph-node-masker rect,
+.graph-node-diagnostic_signal rect {
+  fill: var(--accent-soft);
+  stroke: #ffc7b8;
+}
+
+.empty-graph {
+  padding: 32px;
+  color: var(--muted);
+}
