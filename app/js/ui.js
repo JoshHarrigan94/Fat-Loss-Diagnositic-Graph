@@ -1,11 +1,6 @@
-/**
- * ui.js
- *
- * Presentation helpers for the iPad-first interface.
- */
-
 import { createSubgraphForDiagnosis } from "../../graph/graphEngine.js";
 import { renderGraphSvg } from "../../graph/graphRenderer.js";
+import { downloadMarkdownReport } from "../../reports/downloadReport.js";
 
 export function renderDashboard(result, actions = {}) {
   const root = document.querySelector("#app");
@@ -20,6 +15,7 @@ export function renderDashboard(result, actions = {}) {
     diagnoses,
     prediction,
     graph,
+    markdown,
     importSummary,
     importWarnings
   } = result;
@@ -38,15 +34,17 @@ export function renderDashboard(result, actions = {}) {
       ${renderDiagnosticGrid(report, diagnoses)}
       ${renderGraphPanel(subgraph)}
       ${renderRecommendation(report)}
+      ${renderActions()}
       ${renderSignalAudit(analytics)}
     </section>
   `;
 
-  bindEvents(actions);
+  bindEvents(actions, markdown);
 }
 
-function bindEvents(actions) {
+function bindEvents(actions, markdown) {
   const upload = document.querySelector("#csv-upload");
+  const download = document.querySelector("#download-report");
 
   if (upload && actions.onCsvUpload) {
     upload.addEventListener("change", (event) => {
@@ -54,214 +52,20 @@ function bindEvents(actions) {
       if (file) actions.onCsvUpload(file);
     });
   }
+
+  if (download) {
+    download.addEventListener("click", () => {
+      downloadMarkdownReport(markdown);
+    });
+  }
 }
 
-function renderHero(report) {
+function renderActions() {
   return `
-    <header class="hero">
-      <div>
-        <p class="eyebrow">Fat Loss Diagnostic Graph</p>
-        <h1>${escapeHtml(report.diagnosis.title)}</h1>
-        <p class="summary">${escapeHtml(report.diagnosis.summary)}</p>
-      </div>
-
-      <div class="confidence-card">
-        <span>${report.diagnosis.confidence}%</span>
-        <p>Diagnostic confidence</p>
-      </div>
-    </header>
-  `;
-}
-
-function renderUploadPanel(importSummary, importWarnings = []) {
-  return `
-    <section class="panel upload-panel">
-      <div>
-        <p class="eyebrow">Input data</p>
-        <h2>Upload your fat-loss CSV</h2>
-        <p class="summary small">
-          Required columns: date, bodyweight_kg, calories, protein_g, carbs_g, fat_g, steps, sleep_hours, sleep_quality, training_load.
-        </p>
-
-        ${
-          importSummary
-            ? `<p class="upload-summary">Imported ${importSummary.totalRows} rows from ${importSummary.firstDate} to ${importSummary.lastDate}.</p>`
-            : `<p class="upload-summary">Currently using demo data.</p>`
-        }
-
-        ${
-          importWarnings?.length
-            ? `<ul class="warning-list">${importWarnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul>`
-            : ""
-        }
-      </div>
-
-      <label class="upload-button">
-        Choose CSV
-        <input id="csv-upload" type="file" accept=".csv,text/csv" />
-      </label>
+    <section class="action-row">
+      <button id="download-report" class="primary-button">
+        Download Markdown Report
+      </button>
     </section>
   `;
-}
-
-function renderCoreMetrics(report) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Expected loss", `${report.metrics.expectedLossPerWeek} kg/week`)}
-      ${metricCard("Observed loss", `${report.metrics.observedLossPerWeek} kg/week`)}
-      ${metricCard("Mismatch", `${report.metrics.mismatchKgPerWeek} kg/week`)}
-      ${metricCard("Volatility", `${report.metrics.weightVolatility} kg`)}
-    </section>
-  `;
-}
-
-function renderWeightSignalMetrics(weightSignal) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Weight momentum", formatLabel(weightSignal.momentum))}
-      ${metricCard("Start weight", `${format(weightSignal.startWeight)} kg`)}
-      ${metricCard("End weight", `${format(weightSignal.endWeight)} kg`)}
-      ${metricCard("Masking risk", weightSignal.flags.possibleMasking ? "Likely" : "Lower")}
-    </section>
-  `;
-}
-
-function renderDeficitMetrics(deficit) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Deficit type", formatLabel(deficit.classification))}
-      ${metricCard("Daily deficit", `${format(deficit.dailyDeficit, 0)} kcal`)}
-      ${metricCard("Weekly deficit", `${format(deficit.weeklyDeficit, 0)} kcal`)}
-      ${metricCard("Average calories", `${format(deficit.averageCalories, 0)} kcal`)}
-    </section>
-  `;
-}
-
-function renderAdherenceMetrics(adherence) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Adherence score", `${format(adherence.score, 0)}%`)}
-      ${metricCard("Calorie deviation", `${format(adherence.calorieDeviation, 0)} kcal`)}
-      ${metricCard("Weekend drift", `${format(adherence.weekendDrift, 0)} kcal`)}
-      ${metricCard("Protein hit rate", `${format(adherence.proteinAdherenceRate * 100, 0)}%`)}
-    </section>
-  `;
-}
-
-function renderPredictionMetrics(prediction) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Current weight", `${format(prediction.currentWeight)} kg`)}
-      ${metricCard("7-day prediction", `${format(prediction.predicted7Day)} kg`)}
-      ${metricCard("14-day prediction", `${format(prediction.predicted14Day)} kg`)}
-      ${metricCard("Prediction confidence", `${prediction.confidence}%`)}
-    </section>
-  `;
-}
-
-function renderDiagnosticGrid(report, diagnoses) {
-  return `
-    <section class="content-grid">
-      <article class="panel">
-        <div class="section-title">
-          <h2>Evidence</h2>
-          <span>${diagnoses.length} rule(s) triggered</span>
-        </div>
-
-        <ul class="evidence-list">
-          ${report.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-        </ul>
-      </article>
-
-      <article class="panel">
-        <div class="section-title">
-          <h2>Graph pathways</h2>
-          <span>Reasoning route</span>
-        </div>
-
-        <ul class="path-list">
-          ${report.graphPaths.map((path) => `<li>${escapeHtml(path)}</li>`).join("")}
-        </ul>
-      </article>
-    </section>
-  `;
-}
-
-function renderGraphPanel(subgraph) {
-  return `
-    <section class="panel graph-panel">
-      <div class="section-title">
-        <h2>Knowledge graph</h2>
-        <span>Diagnosis subgraph</span>
-      </div>
-
-      ${renderGraphSvg(subgraph)}
-    </section>
-  `;
-}
-
-function renderRecommendation(report) {
-  return `
-    <section class="panel recommendation">
-      <p class="eyebrow">Recommended action</p>
-      <h2>${escapeHtml(report.recommendation)}</h2>
-    </section>
-  `;
-}
-
-function renderSignalAudit(analytics) {
-  return `
-    <section class="panel debug">
-      <div class="section-title">
-        <h2>Signal audit</h2>
-        <span>Rules input</span>
-      </div>
-
-      <pre>${escapeHtml(JSON.stringify(analytics.signals, null, 2))}</pre>
-    </section>
-  `;
-}
-
-export function renderError(error) {
-  console.error(error);
-
-  const root = document.querySelector("#app");
-  if (!root) return;
-
-  root.innerHTML = `
-    <section class="error">
-      <p class="eyebrow">Fat Loss Diagnostic Graph</p>
-      <h1>Diagnostic engine failed to run</h1>
-      <p>${escapeHtml(error.message)}</p>
-    </section>
-  `;
-}
-
-function metricCard(label, value) {
-  return `
-    <article class="metric-card">
-      <p>${escapeHtml(label)}</p>
-      <strong>${escapeHtml(value)}</strong>
-    </article>
-  `;
-}
-
-function format(value, decimals = 2) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
-  return Number(value).toFixed(decimals);
-}
-
-function formatLabel(value) {
-  return String(value || "unknown")
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
