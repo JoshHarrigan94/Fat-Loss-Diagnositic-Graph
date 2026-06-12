@@ -12,6 +12,7 @@ import { parseCSV } from "../../data/importer.js";
 import { analyseTrends } from "../../analytics/trends.js";
 import { analyseAdherence } from "../../analytics/adherence.js";
 import { analyseDeficit } from "../../analytics/deficit.js";
+import { analyseWeightSignal } from "../../analytics/weightSignal.js";
 
 import { evaluateRules } from "../../rules/diagnosticEngine.js";
 
@@ -31,9 +32,7 @@ import {
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     const result = await runDiagnosticEngine();
-
     renderDashboard(result);
-
     window.FatLossDiagnosticGraph = result;
   } catch (error) {
     renderError(error);
@@ -50,45 +49,43 @@ export async function runDiagnosticEngine() {
 
   const rawRows = parseCSV(csvText);
 
-  const analytics = analyseTrends(rawRows, USER_CONFIG);
+  const trends = analyseTrends(rawRows, USER_CONFIG);
   const adherence = analyseAdherence(rawRows, USER_CONFIG);
   const deficit = analyseDeficit(rawRows, USER_CONFIG);
+  const weightSignal = analyseWeightSignal(rawRows, USER_CONFIG);
 
   const enrichedSignals = {
-    ...analytics.signals,
+    ...trends.signals,
     ...deficit.flags,
+    ...weightSignal.flags,
 
     calorieVariabilityHigh:
-      analytics.signals.calorieVariabilityHigh ||
+      trends.signals.calorieVariabilityHigh ||
       adherence.flags.calorieVariabilityHigh,
 
     weekendCaloriesHigher:
-      analytics.signals.weekendCaloriesHigher ||
+      trends.signals.weekendCaloriesHigher ||
       adherence.flags.weekendDriftHigh,
 
     proteinLow:
-      analytics.signals.proteinLow ||
+      trends.signals.proteinLow ||
       adherence.flags.proteinInconsistent
   };
 
-  const enrichedAnalytics = {
-    ...analytics,
+  const analytics = {
+    ...trends,
     adherence,
     deficit,
+    weightSignal,
     signals: enrichedSignals
   };
 
-  const diagnoses = evaluateRules(
-    rules,
-    enrichedAnalytics.signals
-  );
-
+  const diagnoses = evaluateRules(rules, analytics.signals);
   const graph = createGraph(nodes, edges);
-
-  const prediction = predictWeightTrend(enrichedAnalytics);
+  const prediction = predictWeightTrend(analytics);
 
   const report = generateDiagnosticReport({
-    analytics: enrichedAnalytics,
+    analytics,
     diagnoses,
     graph
   });
@@ -96,9 +93,10 @@ export async function runDiagnosticEngine() {
   const markdown = reportToMarkdown(report);
 
   logDiagnostics({
-    analytics: enrichedAnalytics,
+    analytics,
     adherence,
     deficit,
+    weightSignal,
     diagnoses,
     graph,
     prediction,
@@ -108,9 +106,10 @@ export async function runDiagnosticEngine() {
 
   return {
     rawRows,
-    analytics: enrichedAnalytics,
+    analytics,
     adherence,
     deficit,
+    weightSignal,
     diagnoses,
     graph,
     prediction,
@@ -143,6 +142,7 @@ function logDiagnostics({
   analytics,
   adherence,
   deficit,
+  weightSignal,
   diagnoses,
   graph,
   prediction,
@@ -153,6 +153,7 @@ function logDiagnostics({
   console.log("Analytics:", analytics);
   console.log("Adherence:", adherence);
   console.log("Deficit:", deficit);
+  console.log("Weight signal:", weightSignal);
   console.log("Diagnoses:", diagnoses);
   console.log("Prediction:", prediction);
 
