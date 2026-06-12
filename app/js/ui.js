@@ -9,10 +9,9 @@ import { renderGraphSvg } from "../../graph/graphRenderer.js";
 
 export function renderDashboard(result) {
   const root = document.querySelector("#app");
-
   if (!root) return;
 
-  const { report, analytics, adherence, diagnoses, prediction, graph } = result;
+  const { report, analytics, adherence, deficit, diagnoses, prediction, graph } = result;
 
   const subgraph = createSubgraphForDiagnosis(
     graph,
@@ -23,6 +22,7 @@ export function renderDashboard(result) {
     <section class="shell">
       ${renderHero(report)}
       ${renderCoreMetrics(report)}
+      ${renderDeficitMetrics(deficit)}
       ${renderAdherenceMetrics(adherence)}
       ${renderPredictionMetrics(prediction)}
       ${renderDiagnosticGrid(report, diagnoses)}
@@ -33,7 +33,7 @@ export function renderDashboard(result) {
   `;
 }
 
-export function renderHero(report) {
+function renderHero(report) {
   return `
     <header class="hero">
       <div>
@@ -50,7 +50,7 @@ export function renderHero(report) {
   `;
 }
 
-export function renderCoreMetrics(report) {
+function renderCoreMetrics(report) {
   return `
     <section class="metrics-grid">
       ${metricCard("Expected loss", `${report.metrics.expectedLossPerWeek} kg/week`)}
@@ -61,7 +61,18 @@ export function renderCoreMetrics(report) {
   `;
 }
 
-export function renderAdherenceMetrics(adherence) {
+function renderDeficitMetrics(deficit) {
+  return `
+    <section class="metrics-grid">
+      ${metricCard("Deficit type", formatLabel(deficit.classification))}
+      ${metricCard("Daily deficit", `${format(deficit.dailyDeficit, 0)} kcal`)}
+      ${metricCard("Weekly deficit", `${format(deficit.weeklyDeficit, 0)} kcal`)}
+      ${metricCard("Average calories", `${format(deficit.averageCalories, 0)} kcal`)}
+    </section>
+  `;
+}
+
+function renderAdherenceMetrics(adherence) {
   return `
     <section class="metrics-grid">
       ${metricCard("Adherence score", `${format(adherence.score, 0)}%`)}
@@ -72,7 +83,7 @@ export function renderAdherenceMetrics(adherence) {
   `;
 }
 
-export function renderPredictionMetrics(prediction) {
+function renderPredictionMetrics(prediction) {
   return `
     <section class="metrics-grid">
       ${metricCard("Current weight", `${format(prediction.currentWeight)} kg`)}
@@ -83,7 +94,7 @@ export function renderPredictionMetrics(prediction) {
   `;
 }
 
-export function renderDiagnosticGrid(report, diagnoses) {
+function renderDiagnosticGrid(report, diagnoses) {
   return `
     <section class="content-grid">
       <article class="panel">
@@ -111,7 +122,7 @@ export function renderDiagnosticGrid(report, diagnoses) {
   `;
 }
 
-export function renderGraphPanel(subgraph) {
+function renderGraphPanel(subgraph) {
   return `
     <section class="panel graph-panel">
       <div class="section-title">
@@ -124,7 +135,7 @@ export function renderGraphPanel(subgraph) {
   `;
 }
 
-export function renderRecommendation(report) {
+function renderRecommendation(report) {
   return `
     <section class="panel recommendation">
       <p class="eyebrow">Recommended action</p>
@@ -133,7 +144,7 @@ export function renderRecommendation(report) {
   `;
 }
 
-export function renderSignalAudit(analytics) {
+function renderSignalAudit(analytics) {
   return `
     <section class="panel debug">
       <div class="section-title">
@@ -150,7 +161,6 @@ export function renderError(error) {
   console.error(error);
 
   const root = document.querySelector("#app");
-
   if (!root) return;
 
   root.innerHTML = `
@@ -172,15 +182,17 @@ function metricCard(label, value) {
 }
 
 function format(value, decimals = 2) {
-  if (
-    value === null ||
-    value === undefined ||
-    Number.isNaN(value)
-  ) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
     return "N/A";
   }
 
   return Number(value).toFixed(decimals);
+}
+
+function formatLabel(value) {
+  return String(value || "unknown")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function escapeHtml(value) {
