@@ -36,6 +36,15 @@ import {
 } from "../../graph/graphEngine.js";
 
 import {
+  getActiveGraphNodes,
+  buildCompetingExplanations
+} from "../../graph/activePathways.js";
+
+import {
+  buildInterventionExplanation
+} from "../../graph/interventionMap.js";
+
+import {
   scoreGraphPathways,
   getTopPathway
 } from "../../graph/graphScoring.js";
@@ -62,6 +71,11 @@ import {
   generateTimelineSummary,
   timelineSummaryToMarkdown
 } from "../../reports/timelineReport.js";
+
+import {
+  generateGraphReasoningSummary,
+  graphReasoningToMarkdown
+} from "../../reports/graphReasoningReport.js";
 
 let appResources = null;
 let currentRows = [];
@@ -235,8 +249,26 @@ export function runDiagnosticFromRows(rawRows, resources) {
     diagnoses
   });
 
+  const activeGraphNodes = getActiveGraphNodes(analytics.signals);
+
+  const competingExplanations = buildCompetingExplanations({
+    diagnoses,
+    signals: analytics.signals
+  });
+
   const primaryDiagnosisId =
     diagnoses[0]?.diagnosisId || "insufficient_signal";
+
+  const interventionExplanation = buildInterventionExplanation({
+    diagnosisId: competingExplanations[0]?.diagnosisId || primaryDiagnosisId,
+    competingExplanations
+  });
+
+  const graphReasoningSummary = generateGraphReasoningSummary({
+    activeNodes: activeGraphNodes,
+    competingExplanations,
+    interventionExplanation
+  });
 
   const pathwayExploration = exploreDiagnosisPathways(
     graph,
@@ -266,7 +298,8 @@ export function runDiagnosticFromRows(rawRows, resources) {
 
   const markdown = [
     reportToMarkdown(report),
-    timelineSummaryToMarkdown(timelineSummary)
+    timelineSummaryToMarkdown(timelineSummary),
+    graphReasoningToMarkdown(graphReasoningSummary)
   ].join("\n\n---\n\n");
 
   logDiagnostics({
@@ -281,6 +314,10 @@ export function runDiagnosticFromRows(rawRows, resources) {
     regressionPrediction,
     graphScores,
     topGraphPathway,
+    activeGraphNodes,
+    competingExplanations,
+    interventionExplanation,
+    graphReasoningSummary,
     pathwayExploration,
     rankedExplanationChains,
     timeline,
@@ -303,6 +340,10 @@ export function runDiagnosticFromRows(rawRows, resources) {
     regressionPrediction,
     graphScores,
     topGraphPathway,
+    activeGraphNodes,
+    competingExplanations,
+    interventionExplanation,
+    graphReasoningSummary,
     pathwayExploration,
     rankedExplanationChains,
     timeline,
@@ -370,6 +411,10 @@ function logDiagnostics(payload) {
   console.log("Regression prediction:", payload.regressionPrediction);
   console.log("Graph scores:", payload.graphScores);
   console.log("Top graph pathway:", payload.topGraphPathway);
+  console.log("Active graph nodes:", payload.activeGraphNodes);
+  console.log("Competing explanations:", payload.competingExplanations);
+  console.log("Intervention explanation:", payload.interventionExplanation);
+  console.log("Graph reasoning summary:", payload.graphReasoningSummary);
   console.log("Pathway exploration:", payload.pathwayExploration);
   console.log("Ranked chains:", payload.rankedExplanationChains);
   console.log("Timeline:", payload.timeline);
