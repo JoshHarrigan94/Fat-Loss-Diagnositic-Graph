@@ -8,6 +8,18 @@ import { PATHS, USER_CONFIG } from "./config.js";
 import { renderDashboard, renderError } from "./ui.js";
 
 import { parseCSV, importCSV } from "../../data/importer.js";
+import {
+  saveRowsToLocalStore,
+  loadRowsFromLocalStore,
+  clearLocalStore
+} from "../../data/localStore.js";
+import { downloadRowsAsCSV } from "../../data/csvExport.js";
+
+import {
+  readEntryForm,
+  upsertRowByDate,
+  deleteRowByDate
+} from "./dataEntry.js";
 
 import { analyseTrends } from "../../analytics/trends.js";
 import { analyseAdherence } from "../../analytics/adherence.js";
@@ -51,25 +63,50 @@ import {
 } from "../../reports/timelineReport.js";
 
 let appResources = null;
+let currentRows = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     appResources = await loadResources();
 
-    const csvText = await loadText(PATHS.sampleData);
-    const rawRows = parseCSV(csvText);
+    currentRows = await loadInitialRows();
 
-    const result = runDiagnosticFromRows(rawRows, appResources);
-
-    renderDashboard(result, {
-      onCsvUpload: handleCsvUpload
-    });
-
-    window.FatLossDiagnosticGraph = result;
+    renderFromRows(currentRows);
   } catch (error) {
     renderError(error);
   }
 });
+
+async function loadInitialRows() {
+  const savedRows = loadRowsFromLocalStore();
+
+  if (savedRows?.length) {
+    return savedRows;
+  }
+
+  const csvText = await loadText(PATHS.sampleData);
+  return parseCSV(csvText);
+}
+
+function renderFromRows(rows, extra = {}) {
+  const result = runDiagnosticFromRows(rows, appResources);
+
+  renderDashboard(
+    {
+      ...result,
+      ...extra
+    },
+    {
+      onCsvUpload: handleCsvUpload,
+      onSaveEntry: handleSaveEntry,
+      onDeleteEntry: handleDeleteEntry,
+      onResetData: handleResetData,
+      onExportCsv: handleExportCsv
+    }
+  );
+
+  window.FatLossDiagnosticGraph = result;
+}
 
 async function handleCsvUpload(file) {
   try {
@@ -81,19 +118,67 @@ async function handleCsvUpload(file) {
       );
     }
 
-    const result = runDiagnosticFromRows(imported.rows, appResources);
+    currentRows = imported.rows;
+    saveRowsToLocalStore(currentRows);
 
-    result.importSummary = imported.summary;
-    result.importWarnings = imported.validation.warnings;
-
-    renderDashboard(result, {
-      onCsvUpload: handleCsvUpload
+    renderFromRows(currentRows, {
+      importSummary: imported.summary,
+      importWarnings: imported.validation.warnings
     });
-
-    window.FatLossDiagnosticGraph = result;
   } catch (error) {
     renderError(error);
   }
+}
+
+function handleSaveEntry() {
+  try {
+    const entry = readEntryForm();
+
+    const result = upsertRowByDate(currentRows, entry);
+
+    if (!result.validation.valid) {
+      renderFromRows(currentRows, {
+        entryErrors: result.validation.errors
+      });
+
+      return;
+    }
+
+    currentRows = result.rows;
+    saveRowsToLocalStore(currentRows);
+
+    renderFromRows(currentRows, {
+      entrySuccess: `Saved entry for ${entry.date}.`
+    });
+  } catch (error) {
+    renderError(error);
+  }
+}
+
+function handleDeleteEntry(date) {
+  if (!date) return;
+
+  currentRows = deleteRowByDate(currentRows, date);
+  saveRowsToLocalStore(currentRows);
+
+  renderFromRows(currentRows, {
+    entrySuccess: `Deleted entry for ${date}.`
+  });
+}
+
+async function handleResetData() {
+  clearLocalStore();
+
+  const csvText = await loadText(PATHS.sampleData);
+  currentRows = parseCSV(csvText);
+
+  renderFromRows(currentRows, {
+    entrySuccess: "Reset to demo dataset."
+  });
+}
+
+function handleExportCsv() {
+  downloadRowsAsCSV(currentRows);
 }
 
 async function loadResources() {
@@ -128,7 +213,6 @@ export function runDiagnosticFromRows(rawRows, resources) {
   };
 
   const diagnoses = evaluateRules(resources.rules, analytics.signals);
-
   const graph = createGraph(resources.nodes, resources.edges);
 
   const prediction = predictWeightTrend(analytics);
