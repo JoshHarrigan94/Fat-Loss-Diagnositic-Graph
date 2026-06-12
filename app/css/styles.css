@@ -786,3 +786,126 @@ body {
     min-width: 680px;
   }
 }
+
+/* Phase 3 graph utility sections */
+
+.graph-utility-panel {
+  margin-bottom: 24px;
+}
+
+.explanation-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.explanation-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: #ffffff99;
+  border: 1px solid var(--border);
+}
+
+.explanation-card h3 {
+  margin: 6px 0;
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.explanation-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.score-stack {
+  min-width: 90px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.score-stack span {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+}
+
+.score-stack small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.mechanism-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.mechanism-tags span {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.intervention-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.intervention-card {
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: #ffffff99;
+  border: 1px solid var(--border);
+}
+
+.intervention-card h3 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.intervention-card p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.intervention-card span {
+  display: inline-flex;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+@media (max-width: 1024px) {
+  .intervention-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .explanation-card {
+    flex-direction: column;
+  }
+
+  .score-stack {
+    width: 100%;
+    min-height: 90px;
+  }
+}
