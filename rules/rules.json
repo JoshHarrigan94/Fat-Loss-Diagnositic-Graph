@@ -1,0 +1,169 @@
+[
+  {
+    "id": "masked_fat_loss_water_retention",
+    "diagnosisId": "masked_fat_loss",
+    "title": "Masked fat loss likely",
+    "summary": "Fat loss may be occurring, but scale weight is likely being masked by water retention or short-term weight noise.",
+    "priority": 1,
+    "conditions": [
+      {
+        "metric": "deficitDetected",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "weightTrendFlat",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "weightVolatilityHigh",
+        "operator": "equals",
+        "value": true
+      }
+    ],
+    "evidence": [
+      "Calorie data suggests a deficit is present.",
+      "Observed weight loss is lower than expected.",
+      "Short-term weight volatility is elevated."
+    ],
+    "recommendation": "Hold calories steady for 7 more days before cutting further. Monitor the 7-day average rather than single weigh-ins."
+  },
+  {
+    "id": "recovery_masking_poor_sleep_training",
+    "diagnosisId": "recovery_masking",
+    "title": "Recovery masking likely",
+    "summary": "Poor sleep or higher training load may be increasing short-term water retention and hiding fat loss on the scale.",
+    "priority": 2,
+    "conditions": [
+      {
+        "metric": "sleepPoor",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "trainingLoadHigh",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "weightVolatilityHigh",
+        "operator": "equals",
+        "value": true
+      }
+    ],
+    "evidence": [
+      "Sleep quality or duration is below the target range.",
+      "Training load is elevated.",
+      "Weight volatility is elevated."
+    ],
+    "recommendation": "Keep the calorie target stable, reduce unnecessary training fatigue, and improve sleep consistency for the next week."
+  },
+  {
+    "id": "adherence_drift_calorie_variability",
+    "diagnosisId": "adherence_drift",
+    "title": "Adherence drift likely",
+    "summary": "The apparent deficit may be weakened by inconsistent intake, weekend drift or incomplete logging.",
+    "priority": 3,
+    "conditions": [
+      {
+        "metric": "calorieVariabilityHigh",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "weekendCaloriesHigher",
+        "operator": "equals",
+        "value": true
+      }
+    ],
+    "evidence": [
+      "Calories vary significantly across the week.",
+      "Weekend calorie intake is higher than weekday intake."
+    ],
+    "recommendation": "Audit weekend intake, liquid calories, snacks, cooking oils and untracked extras before reducing calories further."
+  },
+  {
+    "id": "reduced_expenditure_steps_drop",
+    "diagnosisId": "reduced_expenditure",
+    "title": "Reduced expenditure likely",
+    "summary": "A drop in steps or activity may have reduced the real calorie deficit.",
+    "priority": 4,
+    "conditions": [
+      {
+        "metric": "stepsDropped",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "deficitDetected",
+        "operator": "equals",
+        "value": true
+      }
+    ],
+    "evidence": [
+      "Average steps have dropped compared with the previous period.",
+      "Lower daily movement can reduce total expenditure."
+    ],
+    "recommendation": "Restore step count before lowering calories. Aim for a consistent daily step floor."
+  },
+  {
+    "id": "protein_adherence_risk",
+    "diagnosisId": "adherence_drift",
+    "title": "Protein consistency risk",
+    "summary": "Low or inconsistent protein intake may make the deficit harder to maintain and reduce diet quality.",
+    "priority": 5,
+    "conditions": [
+      {
+        "metric": "proteinLow",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "deficitDetected",
+        "operator": "equals",
+        "value": true
+      }
+    ],
+    "evidence": [
+      "Protein intake is below the target threshold.",
+      "Low protein can make hunger and adherence harder during a deficit."
+    ],
+    "recommendation": "Increase protein consistency before making the deficit more aggressive."
+  },
+  {
+    "id": "true_plateau_possible",
+    "diagnosisId": "true_plateau",
+    "title": "True plateau possible",
+    "summary": "A real plateau may be developing if the mismatch persists without strong masking signals.",
+    "priority": 6,
+    "conditions": [
+      {
+        "metric": "deficitDetected",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "weightTrendFlat",
+        "operator": "equals",
+        "value": true
+      },
+      {
+        "metric": "weightVolatilityHigh",
+        "operator": "equals",
+        "value": false
+      },
+      {
+        "metric": "calorieVariabilityHigh",
+        "operator": "equals",
+        "value": false
+      }
+    ],
+    "evidence": [
+      "A deficit is reported.",
+      "Weight trend is flat.",
+      "There are fewer signs of short-term masking or calorie inconsistency."
+    ],
+    "recommendation": "If this persists for another 7–14 days, consider a small calorie reduction or activity increase."
+  }
+]
