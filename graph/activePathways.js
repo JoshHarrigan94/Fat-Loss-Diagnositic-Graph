@@ -13,11 +13,15 @@ export const SIGNAL_TO_GRAPH_NODES = {
   weakDeficit: ["energy_balance"],
 
   weightTrendFlat: ["weight_trend", "plateau", "mismatch"],
+
   weightVolatilityHigh: [
     "weight_volatility",
     "water_retention",
-    "masked_fat_loss"
+    "masked_fat_loss",
+    "recovery_water_retention",
+    "dietary_water_retention"
   ],
+
   possibleMasking: [
     "water_retention",
     "masked_fat_loss",
@@ -45,12 +49,14 @@ export const SIGNAL_TO_GRAPH_NODES = {
   calorieVariabilityHigh: [
     "adherence",
     "logging_accuracy",
-    "adherence_drift"
+    "adherence_drift",
+    "dietary_water_retention"
   ],
 
   weekendCaloriesHigher: [
     "weekend_drift",
-    "adherence_drift"
+    "adherence_drift",
+    "dietary_water_retention"
   ],
 
   proteinLow: [
@@ -103,7 +109,8 @@ export const SIGNAL_TO_GRAPH_NODES = {
   gutLoadHigh: [
     "gut_content_load",
     "gut_content",
-    "scale_weight"
+    "scale_weight",
+    "dietary_water_retention"
   ]
 };
 
@@ -127,6 +134,37 @@ export const DIAGNOSIS_MECHANISM_WEIGHTS = {
     weight_trend: 2
   },
 
+  recovery_water_retention: {
+    recovery_water_retention: 6,
+    poor_sleep_recovery: 5,
+    recovery: 5,
+    training_inflammation: 5,
+    training_load: 4,
+    sleep: 3,
+    sleep_quality: 3,
+    stress_load: 4,
+    illness_inflammation: 4,
+    water_retention: 4,
+    weight_volatility: 4,
+    masked_fat_loss: 2
+  },
+
+  dietary_water_retention: {
+    dietary_water_retention: 6,
+    carbohydrate_shift: 5,
+    glycogen: 4,
+    sodium_intake: 5,
+    alcohol_intake: 4,
+    gut_content_load: 4,
+    gut_content: 4,
+    carbs: 3,
+    calories_in: 2,
+    calorieVariabilityHigh: 2,
+    water_retention: 4,
+    weight_volatility: 4,
+    masked_fat_loss: 2
+  },
+
   recovery_masking: {
     recovery: 5,
     recovery_water_retention: 5,
@@ -147,7 +185,8 @@ export const DIAGNOSIS_MECHANISM_WEIGHTS = {
     weekend_drift: 4,
     calories_in: 3,
     protein: 1,
-    mismatch: 2
+    mismatch: 2,
+    dietary_water_retention: 1
   },
 
   reduced_expenditure: {
