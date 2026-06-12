@@ -197,4 +197,138 @@
     "relationship": "is_type_of",
     "explanation": "A true plateau is a more persistent form of plateau where masking explanations are less likely."
   }
+  
+  ,
+{
+  "source": "training_load",
+  "target": "training_inflammation",
+  "relationship": "can_increase",
+  "explanation": "Higher training load can increase muscle damage, inflammation and short-term fluid retention."
+},
+{
+  "source": "training_inflammation",
+  "target": "water_retention",
+  "relationship": "can_increase",
+  "explanation": "Training-related inflammation can temporarily increase water retention and mask fat loss."
+},
+{
+  "source": "training_inflammation",
+  "target": "recovery_water_retention",
+  "relationship": "supports",
+  "explanation": "Training inflammation supports a recovery-driven water retention explanation."
+},
+{
+  "source": "sodium_intake",
+  "target": "water_retention",
+  "relationship": "can_increase",
+  "explanation": "Higher or inconsistent sodium intake can increase short-term water retention."
+},
+{
+  "source": "sodium_intake",
+  "target": "dietary_water_retention",
+  "relationship": "supports",
+  "explanation": "Sodium inconsistency supports a dietary water retention explanation."
+},
+{
+  "source": "carbs",
+  "target": "carbohydrate_shift",
+  "relationship": "can_create",
+  "explanation": "Changes in carbohydrate intake can alter glycogen storage."
+},
+{
+  "source": "carbohydrate_shift",
+  "target": "glycogen",
+  "relationship": "influences",
+  "explanation": "Carbohydrate shifts influence glycogen storage."
+},
+{
+  "source": "carbohydrate_shift",
+  "target": "dietary_water_retention",
+  "relationship": "supports",
+  "explanation": "Large carbohydrate shifts can support a dietary water retention explanation."
+},
+{
+  "source": "sleep",
+  "target": "poor_sleep_recovery",
+  "relationship": "can_cause",
+  "explanation": "Poor sleep duration can reduce recovery quality."
+},
+{
+  "source": "sleep_quality",
+  "target": "poor_sleep_recovery",
+  "relationship": "can_cause",
+  "explanation": "Poor subjective sleep quality can reduce recovery quality."
+},
+{
+  "source": "poor_sleep_recovery",
+  "target": "recovery",
+  "relationship": "reduces",
+  "explanation": "Poor sleep recovery reduces overall recovery readiness."
+},
+{
+  "source": "poor_sleep_recovery",
+  "target": "recovery_water_retention",
+  "relationship": "supports",
+  "explanation": "Poor sleep recovery supports a recovery-driven water retention explanation."
+},
+{
+  "source": "stress_load",
+  "target": "recovery",
+  "relationship": "taxes",
+  "explanation": "Higher stress load can tax recovery capacity."
+},
+{
+  "source": "stress_load",
+  "target": "recovery_water_retention",
+  "relationship": "supports",
+  "explanation": "Stress load supports a recovery-driven water retention explanation."
+},
+{
+  "source": "alcohol_intake",
+  "target": "sleep_quality",
+  "relationship": "can_reduce",
+  "explanation": "Alcohol can reduce sleep quality and disturb recovery."
+},
+{
+  "source": "alcohol_intake",
+  "target": "dietary_water_retention",
+  "relationship": "supports",
+  "explanation": "Alcohol intake can support a dietary or lifestyle-driven water retention explanation."
+},
+{
+  "source": "gut_content_load",
+  "target": "gut_content",
+  "relationship": "increases",
+  "explanation": "Higher digestive load can increase gut content and short-term scale weight."
+},
+{
+  "source": "gut_content_load",
+  "target": "scale_weight",
+  "relationship": "masks",
+  "explanation": "Digestive mass can increase scale weight independently of fat gain."
+},
+{
+  "source": "illness_inflammation",
+  "target": "water_retention",
+  "relationship": "can_increase",
+  "explanation": "Illness or immune stress can increase water retention and distort scale weight."
+},
+{
+  "source": "illness_inflammation",
+  "target": "recovery_water_retention",
+  "relationship": "supports",
+  "explanation": "Illness-related inflammation supports a recovery-driven water retention explanation."
+},
+{
+  "source": "recovery_water_retention",
+  "target": "masked_fat_loss",
+  "relationship": "can_explain",
+  "explanation": "Recovery-driven water retention can explain why fat loss is hidden on the scale."
+},
+{
+  "source": "dietary_water_retention",
+  "target": "masked_fat_loss",
+  "relationship": "can_explain",
+  "explanation": "Dietary water retention can explain short-term scale weight masking."
+}
 ]
