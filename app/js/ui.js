@@ -3,6 +3,11 @@ import { renderGraphSvg } from "../../graph/graphRenderer.js";
 import { downloadMarkdownReport } from "../../reports/downloadReport.js";
 import { getTodayDateString } from "./dataEntry.js";
 
+import {
+  renderLineChart,
+  renderBarChart
+} from "./charts.js";
+
 export function renderDashboard(result, actions = {}) {
   const root = document.querySelector("#app");
   if (!root) return;
@@ -22,6 +27,7 @@ export function renderDashboard(result, actions = {}) {
     timelineSummary,
     rankedExplanationChains,
     rawRows,
+    chartData,
     importSummary,
     importWarnings,
     entryErrors,
@@ -38,6 +44,7 @@ export function renderDashboard(result, actions = {}) {
       ${renderDataTable(rawRows)}
       ${renderCoreMetrics(report)}
       ${renderWeightSignalMetrics(weightSignal)}
+      ${renderChartPanels(chartData)}
       ${renderDeficitMetrics(deficit)}
       ${renderAdherenceMetrics(adherence)}
       ${renderPredictionMetrics(prediction)}
@@ -289,6 +296,54 @@ function renderWeightSignalMetrics(weightSignal) {
       ${metricCard("Start weight", `${format(weightSignal.startWeight)} kg`)}
       ${metricCard("End weight", `${format(weightSignal.endWeight)} kg`)}
       ${metricCard("Masking risk", weightSignal.flags.possibleMasking ? "Likely" : "Lower")}
+    </section>
+  `;
+}
+
+function renderChartPanels(chartData) {
+  if (!chartData) return "";
+
+  return `
+    <section class="chart-grid">
+      ${renderLineChart({
+        title: "Weight trend",
+        subtitle: "Daily weight with 7-day rolling average.",
+        data: chartData.weightTrend,
+        yKey: "weight",
+        secondaryYKey: "rollingWeight",
+        yLabel: "Daily weight",
+        secondaryLabel: "7-day average",
+        valueSuffix: "kg"
+      })}
+
+      ${renderLineChart({
+        title: "Calories vs weight",
+        subtitle: "Calories alongside rolling bodyweight.",
+        data: chartData.caloriesVsWeight,
+        yKey: "calories",
+        secondaryYKey: "rollingWeight",
+        yLabel: "Calories",
+        secondaryLabel: "Weight trend"
+      })}
+
+      ${renderLineChart({
+        title: "Steps trend",
+        subtitle: "Daily steps with 7-day rolling step average.",
+        data: chartData.stepsTrend,
+        yKey: "steps",
+        secondaryYKey: "rollingSteps",
+        yLabel: "Steps",
+        secondaryLabel: "7-day average"
+      })}
+
+      ${renderBarChart({
+        title: "Weekly diagnosis confidence",
+        subtitle: "Confidence score for each weekly diagnostic window.",
+        data: chartData.weeklyDiagnosis,
+        labelKey: "label",
+        valueKey: "confidence",
+        valueSuffix: "%"
+      })}
     </section>
   `;
 }
