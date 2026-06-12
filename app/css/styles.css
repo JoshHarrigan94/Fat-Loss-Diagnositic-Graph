@@ -380,3 +380,55 @@ body {
   padding: 32px;
   color: var(--muted);
 }
+
+.upload-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.summary.small {
+  font-size: 15px;
+  max-width: 760px;
+}
+
+.upload-summary {
+  margin: 12px 0 0;
+  color: var(--muted);
+}
+
+.upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 150px;
+  padding: 14px 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.upload-button input {
+  display: none;
+}
+
+.warning-list {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: #a86c00;
+}
+
+@media (max-width: 760px) {
+  .upload-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .upload-button {
+    width: 100%;
+  }
+}
