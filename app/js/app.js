@@ -2,24 +2,23 @@
  * app.js
  *
  * Main orchestration layer.
- *
- * Flow:
- * Load data
- * → analyse trends
- * → evaluate rules
- * → create graph
- * → predict trend
- * → generate report
- * → render UI
  */
 
 import { PATHS, USER_CONFIG } from "./config.js";
 import { renderDashboard, renderError } from "./ui.js";
 
 import { parseCSV } from "../../data/importer.js";
+
 import { analyseTrends } from "../../analytics/trends.js";
+import { analyseAdherence } from "../../analytics/adherence.js";
+
 import { evaluateRules } from "../../rules/diagnosticEngine.js";
-import { createGraph, printGraphSummary } from "../../graph/graphEngine.js";
+
+import {
+  createGraph,
+  printGraphSummary
+} from "../../graph/graphEngine.js";
+
 import { predictWeightTrend } from "../../ml/prediction.js";
 
 import {
@@ -52,17 +51,41 @@ export async function runDiagnosticEngine() {
 
   const analytics = analyseTrends(rawRows, USER_CONFIG);
 
+  const adherence = analyseAdherence(rawRows, USER_CONFIG);
+
+  const enrichedSignals = {
+    ...analytics.signals,
+
+    calorieVariabilityHigh:
+      analytics.signals.calorieVariabilityHigh ||
+      adherence.flags.calorieVariabilityHigh,
+
+    weekendCaloriesHigher:
+      analytics.signals.weekendCaloriesHigher ||
+      adherence.flags.weekendDriftHigh,
+
+    proteinLow:
+      analytics.signals.proteinLow ||
+      adherence.flags.proteinInconsistent
+  };
+
+  const enrichedAnalytics = {
+    ...analytics,
+    adherence,
+    signals: enrichedSignals
+  };
+
   const diagnoses = evaluateRules(
     rules,
-    analytics.signals
+    enrichedAnalytics.signals
   );
 
   const graph = createGraph(nodes, edges);
 
-  const prediction = predictWeightTrend(analytics);
+  const prediction = predictWeightTrend(enrichedAnalytics);
 
   const report = generateDiagnosticReport({
-    analytics,
+    analytics: enrichedAnalytics,
     diagnoses,
     graph
   });
@@ -70,7 +93,8 @@ export async function runDiagnosticEngine() {
   const markdown = reportToMarkdown(report);
 
   logDiagnostics({
-    analytics,
+    analytics: enrichedAnalytics,
+    adherence,
     diagnoses,
     graph,
     prediction,
@@ -80,7 +104,8 @@ export async function runDiagnosticEngine() {
 
   return {
     rawRows,
-    analytics,
+    analytics: enrichedAnalytics,
+    adherence,
     diagnoses,
     graph,
     prediction,
@@ -111,6 +136,7 @@ async function loadText(path) {
 
 function logDiagnostics({
   analytics,
+  adherence,
   diagnoses,
   graph,
   prediction,
@@ -119,6 +145,7 @@ function logDiagnostics({
 }) {
   console.log("Graph summary:", printGraphSummary(graph));
   console.log("Analytics:", analytics);
+  console.log("Adherence:", adherence);
   console.log("Diagnoses:", diagnoses);
   console.log("Prediction:", prediction);
 
