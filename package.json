@@ -1,0 +1,22 @@
+{
+  "name": "fat-loss-diagnostic-graph",
+  "version": "0.1.0",
+  "description": "Explainable fat loss diagnostic engine using statistics, rules, knowledge graphs and lightweight prediction.",
+  "main": "app/index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "knowledge-graph",
+    "fat-loss",
+    "diagnostic-engine",
+    "machine-learning",
+    "fitness",
+    "explainable-ai"
+  ],
+  "author": "Joshua Harrigan",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
