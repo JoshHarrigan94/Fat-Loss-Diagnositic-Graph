@@ -1,0 +1,200 @@
+[
+  {
+    "source": "fat_loss",
+    "target": "scale_weight",
+    "relationship": "is_inferred_from",
+    "explanation": "Fat loss is often inferred from scale weight, but scale weight is only a proxy."
+  },
+  {
+    "source": "scale_weight",
+    "target": "weight_trend",
+    "relationship": "produces",
+    "explanation": "Repeated weigh-ins create a bodyweight trend."
+  },
+  {
+    "source": "expected_weight_loss",
+    "target": "mismatch",
+    "relationship": "compared_with",
+    "explanation": "Expected loss is compared with observed loss to identify whether the scale is behaving as expected."
+  },
+  {
+    "source": "observed_weight_loss",
+    "target": "mismatch",
+    "relationship": "compared_with",
+    "explanation": "Observed loss is compared with expected loss to quantify the gap."
+  },
+  {
+    "source": "energy_balance",
+    "target": "expected_weight_loss",
+    "relationship": "drives",
+    "explanation": "A sustained calorie deficit should create expected weight loss over time."
+  },
+  {
+    "source": "calories_in",
+    "target": "energy_balance",
+    "relationship": "influences",
+    "explanation": "Calorie intake is one side of the energy balance equation."
+  },
+  {
+    "source": "calories_out",
+    "target": "energy_balance",
+    "relationship": "influences",
+    "explanation": "Energy expenditure is the other side of the energy balance equation."
+  },
+  {
+    "source": "steps",
+    "target": "neet",
+    "relationship": "proxies",
+    "explanation": "Steps are a practical proxy for non-exercise activity."
+  },
+  {
+    "source": "neet",
+    "target": "calories_out",
+    "relationship": "contributes_to",
+    "explanation": "NEAT contributes to total daily energy expenditure."
+  },
+  {
+    "source": "training_load",
+    "target": "exercise_energy",
+    "relationship": "contributes_to",
+    "explanation": "Structured training contributes to energy expenditure."
+  },
+  {
+    "source": "exercise_energy",
+    "target": "calories_out",
+    "relationship": "contributes_to",
+    "explanation": "Exercise energy expenditure forms part of total calories out."
+  },
+  {
+    "source": "protein",
+    "target": "adherence",
+    "relationship": "supports",
+    "explanation": "Consistent protein intake can support satiety and diet quality."
+  },
+  {
+    "source": "calories_in",
+    "target": "adherence",
+    "relationship": "reflects",
+    "explanation": "Consistent calorie intake can indicate stronger adherence."
+  },
+  {
+    "source": "logging_accuracy",
+    "target": "adherence",
+    "relationship": "affects",
+    "explanation": "Incomplete or inaccurate logging can make apparent deficits unreliable."
+  },
+  {
+    "source": "weekend_drift",
+    "target": "adherence_drift",
+    "relationship": "indicates",
+    "explanation": "Large weekend calorie differences may indicate adherence drift."
+  },
+  {
+    "source": "adherence_drift",
+    "target": "mismatch",
+    "relationship": "can_explain",
+    "explanation": "If intake is inconsistent, expected loss may be overestimated."
+  },
+  {
+    "source": "carbs",
+    "target": "glycogen",
+    "relationship": "influences",
+    "explanation": "Higher carbohydrate intake can increase glycogen storage."
+  },
+  {
+    "source": "glycogen",
+    "target": "water_retention",
+    "relationship": "influences",
+    "explanation": "Glycogen storage is associated with water storage."
+  },
+  {
+    "source": "water_retention",
+    "target": "scale_weight",
+    "relationship": "masks",
+    "explanation": "Water retention can temporarily hide fat loss on the scale."
+  },
+  {
+    "source": "gut_content",
+    "target": "scale_weight",
+    "relationship": "masks",
+    "explanation": "Gut content can alter short-term scale weight independently of fat loss."
+  },
+  {
+    "source": "sleep",
+    "target": "recovery",
+    "relationship": "influences",
+    "explanation": "Sleep affects recovery from training and dieting."
+  },
+  {
+    "source": "sleep_quality",
+    "target": "recovery",
+    "relationship": "influences",
+    "explanation": "Lower sleep quality can reduce recovery readiness."
+  },
+  {
+    "source": "stress",
+    "target": "recovery",
+    "relationship": "influences",
+    "explanation": "Higher stress can reduce recovery capacity."
+  },
+  {
+    "source": "training_load",
+    "target": "recovery",
+    "relationship": "taxes",
+    "explanation": "Higher training load increases recovery demand."
+  },
+  {
+    "source": "recovery",
+    "target": "water_retention",
+    "relationship": "can_increase",
+    "explanation": "Poor recovery may increase weight volatility and water retention."
+  },
+  {
+    "source": "weight_volatility",
+    "target": "masked_fat_loss",
+    "relationship": "supports",
+    "explanation": "Higher short-term weight volatility supports the idea that scale weight may be masking fat loss."
+  },
+  {
+    "source": "water_retention",
+    "target": "masked_fat_loss",
+    "relationship": "supports",
+    "explanation": "Water retention is a primary mechanism behind masked fat loss."
+  },
+  {
+    "source": "mismatch",
+    "target": "plateau",
+    "relationship": "can_indicate",
+    "explanation": "A mismatch between expected and observed loss can look like a plateau."
+  },
+  {
+    "source": "mismatch",
+    "target": "masked_fat_loss",
+    "relationship": "can_indicate",
+    "explanation": "A mismatch can indicate that fat loss is occurring but being hidden."
+  },
+  {
+    "source": "steps",
+    "target": "reduced_expenditure",
+    "relationship": "can_indicate",
+    "explanation": "A drop in steps may suggest reduced expenditure."
+  },
+  {
+    "source": "reduced_expenditure",
+    "target": "mismatch",
+    "relationship": "can_explain",
+    "explanation": "Reduced expenditure can shrink the actual deficit and explain poor observed loss."
+  },
+  {
+    "source": "recovery_masking",
+    "target": "masked_fat_loss",
+    "relationship": "can_contribute_to",
+    "explanation": "Recovery stress can contribute to water retention and masked fat loss."
+  },
+  {
+    "source": "true_plateau",
+    "target": "plateau",
+    "relationship": "is_type_of",
+    "explanation": "A true plateau is a more persistent form of plateau where masking explanations are less likely."
+  }
+]
