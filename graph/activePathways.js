@@ -159,7 +159,6 @@ export const DIAGNOSIS_MECHANISM_WEIGHTS = {
     gut_content: 4,
     carbs: 3,
     calories_in: 2,
-    calorieVariabilityHigh: 2,
     water_retention: 4,
     weight_volatility: 4,
     masked_fat_loss: 2
