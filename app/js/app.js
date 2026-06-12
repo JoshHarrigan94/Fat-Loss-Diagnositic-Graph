@@ -7,7 +7,7 @@
 import { PATHS, USER_CONFIG } from "./config.js";
 import { renderDashboard, renderError } from "./ui.js";
 
-import { parseCSV } from "../../data/importer.js";
+import { parseCSV, importCSV } from "../../data/importer.js";
 
 import { analyseTrends } from "../../analytics/trends.js";
 import { analyseAdherence } from "../../analytics/adherence.js";
@@ -29,26 +29,63 @@ import {
   reportToConsole
 } from "../../reports/reportGenerator.js";
 
+let appResources = null;
+
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    const result = await runDiagnosticEngine();
-    renderDashboard(result);
+    appResources = await loadResources();
+
+    const csvText = await loadText(PATHS.sampleData);
+    const rawRows = parseCSV(csvText);
+
+    const result = runDiagnosticFromRows(rawRows, appResources);
+
+    renderDashboard(result, {
+      onCsvUpload: handleCsvUpload
+    });
+
     window.FatLossDiagnosticGraph = result;
   } catch (error) {
     renderError(error);
   }
 });
 
-export async function runDiagnosticEngine() {
-  const [csvText, nodes, edges, rules] = await Promise.all([
-    loadText(PATHS.sampleData),
+async function handleCsvUpload(file) {
+  try {
+    const imported = await importCSV(file);
+
+    if (!imported.validation.valid) {
+      throw new Error(
+        `CSV validation failed. Missing columns: ${imported.validation.missingColumns.join(", ")}`
+      );
+    }
+
+    const result = runDiagnosticFromRows(imported.rows, appResources);
+
+    result.importSummary = imported.summary;
+    result.importWarnings = imported.validation.warnings;
+
+    renderDashboard(result, {
+      onCsvUpload: handleCsvUpload
+    });
+
+    window.FatLossDiagnosticGraph = result;
+  } catch (error) {
+    renderError(error);
+  }
+}
+
+async function loadResources() {
+  const [nodes, edges, rules] = await Promise.all([
     loadJson(PATHS.graphNodes),
     loadJson(PATHS.graphEdges),
     loadJson(PATHS.rules)
   ]);
 
-  const rawRows = parseCSV(csvText);
+  return { nodes, edges, rules };
+}
 
+export function runDiagnosticFromRows(rawRows, resources) {
   const trends = analyseTrends(rawRows, USER_CONFIG);
   const adherence = analyseAdherence(rawRows, USER_CONFIG);
   const deficit = analyseDeficit(rawRows, USER_CONFIG);
@@ -80,8 +117,8 @@ export async function runDiagnosticEngine() {
     signals: enrichedSignals
   };
 
-  const diagnoses = evaluateRules(rules, analytics.signals);
-  const graph = createGraph(nodes, edges);
+  const diagnoses = evaluateRules(resources.rules, analytics.signals);
+  const graph = createGraph(resources.nodes, resources.edges);
   const prediction = predictWeightTrend(analytics);
 
   const report = generateDiagnosticReport({
