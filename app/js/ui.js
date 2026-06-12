@@ -11,7 +11,16 @@ export function renderDashboard(result) {
   const root = document.querySelector("#app");
   if (!root) return;
 
-  const { report, analytics, adherence, deficit, diagnoses, prediction, graph } = result;
+  const {
+    report,
+    analytics,
+    adherence,
+    deficit,
+    weightSignal,
+    diagnoses,
+    prediction,
+    graph
+  } = result;
 
   const subgraph = createSubgraphForDiagnosis(
     graph,
@@ -22,6 +31,7 @@ export function renderDashboard(result) {
     <section class="shell">
       ${renderHero(report)}
       ${renderCoreMetrics(report)}
+      ${renderWeightSignalMetrics(weightSignal)}
       ${renderDeficitMetrics(deficit)}
       ${renderAdherenceMetrics(adherence)}
       ${renderPredictionMetrics(prediction)}
@@ -57,6 +67,17 @@ function renderCoreMetrics(report) {
       ${metricCard("Observed loss", `${report.metrics.observedLossPerWeek} kg/week`)}
       ${metricCard("Mismatch", `${report.metrics.mismatchKgPerWeek} kg/week`)}
       ${metricCard("Volatility", `${report.metrics.weightVolatility} kg`)}
+    </section>
+  `;
+}
+
+function renderWeightSignalMetrics(weightSignal) {
+  return `
+    <section class="metrics-grid">
+      ${metricCard("Weight momentum", formatLabel(weightSignal.momentum))}
+      ${metricCard("Start weight", `${format(weightSignal.startWeight)} kg`)}
+      ${metricCard("End weight", `${format(weightSignal.endWeight)} kg`)}
+      ${metricCard("Masking risk", weightSignal.flags.possibleMasking ? "Likely" : "Lower")}
     </section>
   `;
 }
