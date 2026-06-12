@@ -197,4 +197,66 @@
     "type": "diagnosis",
     "description": "A diagnosis where poor sleep, higher training stress or broader recovery strain may be increasing weight volatility and water retention."
   }
+  
+  ,
+{
+  "id": "training_inflammation",
+  "label": "Training Inflammation",
+  "type": "mechanism",
+  "description": "Temporary inflammation and fluid retention caused by hard training, muscle damage or unusually high training load."
+},
+{
+  "id": "sodium_intake",
+  "label": "Sodium Intake",
+  "type": "input",
+  "description": "Dietary sodium intake. Higher or inconsistent sodium can increase short-term water retention and scale weight volatility."
+},
+{
+  "id": "carbohydrate_shift",
+  "label": "Carbohydrate Shift",
+  "type": "mechanism",
+  "description": "A meaningful change in carbohydrate intake that can alter glycogen storage and associated body water."
+},
+{
+  "id": "stress_load",
+  "label": "Stress Load",
+  "type": "context",
+  "description": "Psychological or physiological stress that can affect sleep, recovery, appetite, adherence and water retention."
+},
+{
+  "id": "poor_sleep_recovery",
+  "label": "Poor Sleep Recovery",
+  "type": "mechanism",
+  "description": "A recovery state where poor sleep duration or quality reduces readiness and may contribute to water retention."
+},
+{
+  "id": "alcohol_intake",
+  "label": "Alcohol Intake",
+  "type": "input",
+  "description": "Alcohol intake, which can affect sleep quality, hydration, appetite, adherence and short-term bodyweight."
+},
+{
+  "id": "gut_content_load",
+  "label": "Gut Content Load",
+  "type": "mechanism",
+  "description": "Short-term digestive mass from food volume, fibre, meal timing or bowel regularity that can influence scale weight."
+},
+{
+  "id": "illness_inflammation",
+  "label": "Illness Inflammation",
+  "type": "context",
+  "description": "Inflammatory load from illness or immune stress that may increase water retention and disturb weight trend interpretation."
+},
+{
+  "id": "recovery_water_retention",
+  "label": "Recovery-Driven Water Retention",
+  "type": "subtype",
+  "description": "Water retention primarily driven by poor recovery, hard training, poor sleep or stress load."
+},
+{
+  "id": "dietary_water_retention",
+  "label": "Dietary Water Retention",
+  "type": "subtype",
+  "description": "Water retention primarily driven by carbohydrate, sodium, alcohol or digestive changes."
+}
 ]
