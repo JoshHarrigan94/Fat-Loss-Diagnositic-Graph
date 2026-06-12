@@ -12,7 +12,7 @@ export function renderDashboard(result) {
 
   if (!root) return;
 
-  const { report, analytics, diagnoses, prediction, graph } = result;
+  const { report, analytics, adherence, diagnoses, prediction, graph } = result;
 
   const subgraph = createSubgraphForDiagnosis(
     graph,
@@ -23,6 +23,7 @@ export function renderDashboard(result) {
     <section class="shell">
       ${renderHero(report)}
       ${renderCoreMetrics(report)}
+      ${renderAdherenceMetrics(adherence)}
       ${renderPredictionMetrics(prediction)}
       ${renderDiagnosticGrid(report, diagnoses)}
       ${renderGraphPanel(subgraph)}
@@ -56,6 +57,17 @@ export function renderCoreMetrics(report) {
       ${metricCard("Observed loss", `${report.metrics.observedLossPerWeek} kg/week`)}
       ${metricCard("Mismatch", `${report.metrics.mismatchKgPerWeek} kg/week`)}
       ${metricCard("Volatility", `${report.metrics.weightVolatility} kg`)}
+    </section>
+  `;
+}
+
+export function renderAdherenceMetrics(adherence) {
+  return `
+    <section class="metrics-grid">
+      ${metricCard("Adherence score", `${format(adherence.score, 0)}%`)}
+      ${metricCard("Calorie deviation", `${format(adherence.calorieDeviation, 0)} kcal`)}
+      ${metricCard("Weekend drift", `${format(adherence.weekendDrift, 0)} kcal`)}
+      ${metricCard("Protein hit rate", `${format(adherence.proteinAdherenceRate * 100, 0)}%`)}
     </section>
   `;
 }
@@ -159,7 +171,7 @@ function metricCard(label, value) {
   `;
 }
 
-function format(value) {
+function format(value, decimals = 2) {
   if (
     value === null ||
     value === undefined ||
@@ -168,7 +180,7 @@ function format(value) {
     return "N/A";
   }
 
-  return Number(value).toFixed(2);
+  return Number(value).toFixed(decimals);
 }
 
 function escapeHtml(value) {
