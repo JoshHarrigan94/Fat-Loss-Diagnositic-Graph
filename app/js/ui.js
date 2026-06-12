@@ -22,6 +22,9 @@ export function renderDashboard(result, actions = {}) {
     prediction,
     regressionPrediction,
     regressionModel,
+    modelEvaluation,
+    modelComparison,
+    mlSummary,
     graph,
     markdown,
     timelineSummary,
@@ -53,6 +56,7 @@ export function renderDashboard(result, actions = {}) {
       ${renderAdherenceMetrics(adherence)}
       ${renderPredictionMetrics(prediction)}
       ${renderRegressionPanel(regressionPrediction, regressionModel)}
+      ${renderMLEvaluationPanel(modelEvaluation, modelComparison, mlSummary)}
       ${renderTimelinePanel(timelineSummary)}
       ${renderDiagnosticGrid(report, diagnoses)}
       ${renderGraphReasoningSummary(graphReasoningSummary)}
@@ -430,6 +434,48 @@ function renderRegressionPanel(regressionPrediction, regressionModel) {
             : "<li>Not enough data for contribution analysis.</li>"
         }
       </ul>
+    </section>
+  `;
+}
+
+function renderMLEvaluationPanel(modelEvaluation, modelComparison, mlSummary) {
+  if (!modelEvaluation?.available) {
+    return `
+      <section class="panel ml-eval-panel">
+        <div class="section-title">
+          <h2>ML evaluation</h2>
+          <span>Model quality</span>
+        </div>
+        <p class="summary small">${escapeHtml(modelEvaluation?.reason || "Not enough data to evaluate the model.")}</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="panel ml-eval-panel">
+      <div class="section-title">
+        <h2>ML evaluation</h2>
+        <span>Model quality</span>
+      </div>
+
+      <p class="summary small">${escapeHtml(mlSummary?.narrative || modelEvaluation.interpretation)}</p>
+
+      <section class="metrics-grid compact">
+        ${metricCard("MAE", `${format(modelEvaluation.mae)} kg`)}
+        ${metricCard("Bias", `${format(modelEvaluation.bias)} kg`)}
+        ${metricCard("≤0.25kg accuracy", `${format(modelEvaluation.accuracyWithin025 * 100, 0)}%`)}
+        ${metricCard("≤0.5kg accuracy", `${format(modelEvaluation.accuracyWithin05 * 100, 0)}%`)}
+      </section>
+
+      ${
+        modelComparison?.available
+          ? `<div class="model-comparison-box">
+              <h3>Model comparison</h3>
+              <p>${escapeHtml(modelComparison.recommendation)}</p>
+              <span>Regression confidence delta: ${format(modelComparison.confidenceDelta, 0)}%</span>
+            </div>`
+          : ""
+      }
     </section>
   `;
 }
