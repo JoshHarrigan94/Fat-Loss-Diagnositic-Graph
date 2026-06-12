@@ -33,6 +33,7 @@ export function renderDashboard(result, actions = {}) {
     competingExplanations,
     interventionExplanation,
     graphReasoningSummary,
+    simulationSummary,
     rawRows,
     chartData,
     importSummary,
@@ -57,6 +58,7 @@ export function renderDashboard(result, actions = {}) {
       ${renderPredictionMetrics(prediction)}
       ${renderRegressionPanel(regressionPrediction, regressionModel)}
       ${renderMLEvaluationPanel(modelEvaluation, modelComparison, mlSummary)}
+      ${renderSimulationPanel(simulationSummary)}
       ${renderTimelinePanel(timelineSummary)}
       ${renderDiagnosticGrid(report, diagnoses)}
       ${renderGraphReasoningSummary(graphReasoningSummary)}
@@ -476,6 +478,57 @@ function renderMLEvaluationPanel(modelEvaluation, modelComparison, mlSummary) {
             </div>`
           : ""
       }
+    </section>
+  `;
+}
+
+function renderSimulationPanel(simulationSummary) {
+  if (!simulationSummary?.available) {
+    return `
+      <section class="panel simulation-panel">
+        <div class="section-title">
+          <h2>Intervention simulator</h2>
+          <span>Scenario layer</span>
+        </div>
+        <p class="summary small">No intervention simulations available.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="panel simulation-panel">
+      <div class="section-title">
+        <h2>Intervention simulator</h2>
+        <span>What should change first?</span>
+      </div>
+
+      <p class="summary small">${escapeHtml(simulationSummary.summary)}</p>
+
+      <div class="simulation-grid">
+        ${simulationSummary.items
+          .map(
+            (item) => `
+              <article class="simulation-card">
+                <div>
+                  <p class="eyebrow">${escapeHtml(item.impact.pathwayAffected)}</p>
+                  <h3>${escapeHtml(item.label)}</h3>
+                  <p>${escapeHtml(item.impact.likelyDiagnosisShift)}</p>
+                </div>
+
+                <div class="simulation-impact">
+                  <span>${format(item.impact.estimatedWeeklyLossDelta)} kg/wk</span>
+                  <small>estimated delta</small>
+                </div>
+
+                <footer>
+                  <span>Projected loss: ${format(item.impact.projectedExpectedLoss)} kg/wk</span>
+                  <span>Risk: ${escapeHtml(item.impact.risk)}</span>
+                </footer>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
     </section>
   `;
 }
