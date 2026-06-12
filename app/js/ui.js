@@ -7,7 +7,7 @@
 import { createSubgraphForDiagnosis } from "../../graph/graphEngine.js";
 import { renderGraphSvg } from "../../graph/graphRenderer.js";
 
-export function renderDashboard(result) {
+export function renderDashboard(result, actions = {}) {
   const root = document.querySelector("#app");
   if (!root) return;
 
@@ -19,17 +19,17 @@ export function renderDashboard(result) {
     weightSignal,
     diagnoses,
     prediction,
-    graph
+    graph,
+    importSummary,
+    importWarnings
   } = result;
 
-  const subgraph = createSubgraphForDiagnosis(
-    graph,
-    report.diagnosis.id
-  );
+  const subgraph = createSubgraphForDiagnosis(graph, report.diagnosis.id);
 
   root.innerHTML = `
     <section class="shell">
       ${renderHero(report)}
+      ${renderUploadPanel(importSummary, importWarnings)}
       ${renderCoreMetrics(report)}
       ${renderWeightSignalMetrics(weightSignal)}
       ${renderDeficitMetrics(deficit)}
@@ -41,6 +41,19 @@ export function renderDashboard(result) {
       ${renderSignalAudit(analytics)}
     </section>
   `;
+
+  bindEvents(actions);
+}
+
+function bindEvents(actions) {
+  const upload = document.querySelector("#csv-upload");
+
+  if (upload && actions.onCsvUpload) {
+    upload.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      if (file) actions.onCsvUpload(file);
+    });
+  }
 }
 
 function renderHero(report) {
@@ -57,6 +70,37 @@ function renderHero(report) {
         <p>Diagnostic confidence</p>
       </div>
     </header>
+  `;
+}
+
+function renderUploadPanel(importSummary, importWarnings = []) {
+  return `
+    <section class="panel upload-panel">
+      <div>
+        <p class="eyebrow">Input data</p>
+        <h2>Upload your fat-loss CSV</h2>
+        <p class="summary small">
+          Required columns: date, bodyweight_kg, calories, protein_g, carbs_g, fat_g, steps, sleep_hours, sleep_quality, training_load.
+        </p>
+
+        ${
+          importSummary
+            ? `<p class="upload-summary">Imported ${importSummary.totalRows} rows from ${importSummary.firstDate} to ${importSummary.lastDate}.</p>`
+            : `<p class="upload-summary">Currently using demo data.</p>`
+        }
+
+        ${
+          importWarnings?.length
+            ? `<ul class="warning-list">${importWarnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul>`
+            : ""
+        }
+      </div>
+
+      <label class="upload-button">
+        Choose CSV
+        <input id="csv-upload" type="file" accept=".csv,text/csv" />
+      </label>
+    </section>
   `;
 }
 
@@ -203,10 +247,7 @@ function metricCard(label, value) {
 }
 
 function format(value, decimals = 2) {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return "N/A";
-  }
-
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
   return Number(value).toFixed(decimals);
 }
 
