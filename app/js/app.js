@@ -1,46 +1,55 @@
 /**
  * app.js
  *
- * Application orchestration layer.
- *
- * Purpose:
- * - Load demo data
- * - Load graph and rules
- * - Run analytics
- * - Run diagnostic rules
- * - Generate report
- * - Expose the result for UI rendering
+ * Main orchestration layer.
  */
+
+import { PATHS, USER_CONFIG } from "./config.js";
 
 import { parseCSV } from "../../data/importer.js";
 import { analyseTrends } from "../../analytics/trends.js";
 import { evaluateRules } from "../../rules/diagnosticEngine.js";
 import { createGraph, printGraphSummary } from "../../graph/graphEngine.js";
+import { predictWeightTrend } from "../../ml/prediction.js";
+
 import {
   generateDiagnosticReport,
   reportToMarkdown,
   reportToConsole
 } from "../../reports/reportGenerator.js";
 
-const APP_CONFIG = {
-  estimatedMaintenanceCalories: 3700,
-  proteinTarget: 180,
-  sleepHourTarget: 7,
-  sleepQualityTarget: 3.5
-};
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const result = await runDiagnosticEngine();
+
+    renderBasicReport(result);
+
+    window.FatLossDiagnosticGraph = result;
+  } catch (error) {
+    renderError(error);
+  }
+});
 
 export async function runDiagnosticEngine() {
   const [csvText, nodes, edges, rules] = await Promise.all([
-    fetch("../data/sample.csv").then((res) => res.text()),
-    fetch("../graph/nodes.json").then((res) => res.json()),
-    fetch("../graph/edges.json").then((res) => res.json()),
-    fetch("../rules/rules.json").then((res) => res.json())
+    loadText(PATHS.sampleData),
+    loadJson(PATHS.graphNodes),
+    loadJson(PATHS.graphEdges),
+    loadJson(PATHS.rules)
   ]);
 
   const rawRows = parseCSV(csvText);
-  const analytics = analyseTrends(rawRows, APP_CONFIG);
-  const diagnoses = evaluateRules(rules, analytics.signals);
+
+  const analytics = analyseTrends(rawRows, USER_CONFIG);
+
+  const diagnoses = evaluateRules(
+    rules,
+    analytics.signals
+  );
+
   const graph = createGraph(nodes, edges);
+
+  const prediction = predictWeightTrend(analytics);
 
   const report = generateDiagnosticReport({
     analytics,
@@ -53,6 +62,8 @@ export async function runDiagnosticEngine() {
   console.log("Graph summary:", printGraphSummary(graph));
   console.log("Analytics:", analytics);
   console.log("Diagnoses:", diagnoses);
+  console.log("Prediction:", prediction);
+
   reportToConsole(report);
   console.log(markdown);
 
@@ -61,20 +72,38 @@ export async function runDiagnosticEngine() {
     analytics,
     diagnoses,
     graph,
+    prediction,
     report,
     markdown
   };
 }
 
-export function renderBasicReport(result) {
-  const root = document.querySelector("#app");
+async function loadJson(path) {
+  const response = await fetch(path);
 
-  if (!root) {
-    console.warn("No #app element found.");
-    return;
+  if (!response.ok) {
+    throw new Error(`Failed to load JSON: ${path}`);
   }
 
-  const { report, analytics, diagnoses } = result;
+  return response.json();
+}
+
+async function loadText(path) {
+  const response = await fetch(path);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load text file: ${path}`);
+  }
+
+  return response.text();
+}
+
+function renderBasicReport(result) {
+  const root = document.querySelector("#app");
+
+  if (!root) return;
+
+  const { report, analytics, diagnoses, prediction } = result;
 
   root.innerHTML = `
     <section class="shell">
@@ -87,27 +116,22 @@ export function renderBasicReport(result) {
 
         <div class="confidence-card">
           <span>${report.diagnosis.confidence}%</span>
-          <p>Confidence</p>
+          <p>Diagnostic confidence</p>
         </div>
       </header>
 
       <section class="metrics-grid">
-        ${metricCard(
-          "Expected loss",
-          `${report.metrics.expectedLossPerWeek} kg/week`
-        )}
-        ${metricCard(
-          "Observed loss",
-          `${report.metrics.observedLossPerWeek} kg/week`
-        )}
-        ${metricCard(
-          "Mismatch",
-          `${report.metrics.mismatchKgPerWeek} kg/week`
-        )}
-        ${metricCard(
-          "Weight volatility",
-          `${report.metrics.weightVolatility} kg`
-        )}
+        ${metricCard("Expected loss", `${report.metrics.expectedLossPerWeek} kg/week`)}
+        ${metricCard("Observed loss", `${report.metrics.observedLossPerWeek} kg/week`)}
+        ${metricCard("Mismatch", `${report.metrics.mismatchKgPerWeek} kg/week`)}
+        ${metricCard("Volatility", `${report.metrics.weightVolatility} kg`)}
+      </section>
+
+      <section class="metrics-grid">
+        ${metricCard("Current weight", `${format(prediction.currentWeight)} kg`)}
+        ${metricCard("7-day prediction", `${format(prediction.predicted7Day)} kg`)}
+        ${metricCard("14-day prediction", `${format(prediction.predicted14Day)} kg`)}
+        ${metricCard("Prediction confidence", `${prediction.confidence}%`)}
       </section>
 
       <section class="content-grid">
@@ -118,9 +142,7 @@ export function renderBasicReport(result) {
           </div>
 
           <ul class="evidence-list">
-            ${report.evidence
-              .map((item) => `<li>${item}</li>`)
-              .join("")}
+            ${report.evidence.map((item) => `<li>${item}</li>`).join("")}
           </ul>
         </article>
 
@@ -131,9 +153,7 @@ export function renderBasicReport(result) {
           </div>
 
           <ul class="path-list">
-            ${report.graphPaths
-              .map((path) => `<li>${path}</li>`)
-              .join("")}
+            ${report.graphPaths.map((path) => `<li>${path}</li>`).join("")}
           </ul>
         </article>
       </section>
@@ -164,24 +184,30 @@ function metricCard(label, value) {
   `;
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    const result = await runDiagnosticEngine();
-    renderBasicReport(result);
+function renderError(error) {
+  console.error(error);
 
-    window.FatLossDiagnosticGraph = result;
-  } catch (error) {
-    console.error(error);
+  const root = document.querySelector("#app");
 
-    const root = document.querySelector("#app");
+  if (!root) return;
 
-    if (root) {
-      root.innerHTML = `
-        <section class="error">
-          <h1>Diagnostic engine failed to run</h1>
-          <p>${error.message}</p>
-        </section>
-      `;
-    }
+  root.innerHTML = `
+    <section class="error">
+      <p class="eyebrow">Fat Loss Diagnostic Graph</p>
+      <h1>Diagnostic engine failed to run</h1>
+      <p>${error.message}</p>
+    </section>
+  `;
+}
+
+function format(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    Number.isNaN(value)
+  ) {
+    return "N/A";
   }
-});
+
+  return Number(value).toFixed(2);
+}
