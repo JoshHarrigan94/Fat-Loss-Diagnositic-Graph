@@ -1,0 +1,200 @@
+[
+  {
+    "id": "fat_loss",
+    "label": "Fat Loss",
+    "type": "outcome",
+    "description": "The reduction of body fat over time, usually inferred through bodyweight trend, measurements, performance context and adherence data."
+  },
+  {
+    "id": "scale_weight",
+    "label": "Scale Weight",
+    "type": "observable",
+    "description": "The user's measured bodyweight. It is an imperfect proxy for fat loss because it includes water, glycogen, gut content and lean mass."
+  },
+  {
+    "id": "weight_trend",
+    "label": "Weight Trend",
+    "type": "signal",
+    "description": "The direction of bodyweight over time, usually assessed using rolling averages rather than single weigh-ins."
+  },
+  {
+    "id": "expected_weight_loss",
+    "label": "Expected Weight Loss",
+    "type": "calculated_signal",
+    "description": "Estimated weight change based on the user's calorie deficit and assumed energy cost of body mass loss."
+  },
+  {
+    "id": "observed_weight_loss",
+    "label": "Observed Weight Loss",
+    "type": "calculated_signal",
+    "description": "Actual trend in bodyweight over a defined period."
+  },
+  {
+    "id": "mismatch",
+    "label": "Expected vs Observed Mismatch",
+    "type": "diagnostic_signal",
+    "description": "The gap between expected weight loss and observed weight loss."
+  },
+  {
+    "id": "energy_balance",
+    "label": "Energy Balance",
+    "type": "mechanism",
+    "description": "The relationship between energy intake and energy expenditure."
+  },
+  {
+    "id": "calories_in",
+    "label": "Calories In",
+    "type": "input",
+    "description": "Daily energy intake recorded by the user."
+  },
+  {
+    "id": "calories_out",
+    "label": "Calories Out",
+    "type": "mechanism",
+    "description": "Total energy expenditure from basal metabolism, movement, training and thermic effect of food."
+  },
+  {
+    "id": "steps",
+    "label": "Steps",
+    "type": "input",
+    "description": "Daily step count used as a practical proxy for low-level activity and NEAT."
+  },
+  {
+    "id": "neet",
+    "label": "NEAT",
+    "type": "mechanism",
+    "description": "Non-exercise activity thermogenesis. This includes walking, fidgeting, posture and general daily movement."
+  },
+  {
+    "id": "training_load",
+    "label": "Training Load",
+    "type": "input",
+    "description": "A simple user-recorded marker of training stress."
+  },
+  {
+    "id": "exercise_energy",
+    "label": "Exercise Energy Expenditure",
+    "type": "mechanism",
+    "description": "Energy expended through structured training."
+  },
+  {
+    "id": "protein",
+    "label": "Protein Intake",
+    "type": "input",
+    "description": "Daily protein intake, used as a marker of diet quality, satiety and muscle retention support."
+  },
+  {
+    "id": "carbs",
+    "label": "Carbohydrate Intake",
+    "type": "input",
+    "description": "Daily carbohydrate intake. Changes in carbohydrate intake can alter glycogen and water storage."
+  },
+  {
+    "id": "fat",
+    "label": "Fat Intake",
+    "type": "input",
+    "description": "Daily fat intake, part of total calorie intake and dietary adherence."
+  },
+  {
+    "id": "adherence",
+    "label": "Adherence",
+    "type": "behaviour",
+    "description": "How consistently the user follows their planned calorie, protein and activity targets."
+  },
+  {
+    "id": "logging_accuracy",
+    "label": "Logging Accuracy",
+    "type": "behaviour",
+    "description": "The accuracy and completeness of user-entered food and activity data."
+  },
+  {
+    "id": "weekend_drift",
+    "label": "Weekend Drift",
+    "type": "behaviour",
+    "description": "A pattern where calories or activity meaningfully change at weekends compared with weekdays."
+  },
+  {
+    "id": "water_retention",
+    "label": "Water Retention",
+    "type": "masker",
+    "description": "Temporary increases in body water that can hide fat loss on the scale."
+  },
+  {
+    "id": "glycogen",
+    "label": "Glycogen",
+    "type": "masker",
+    "description": "Stored carbohydrate in muscle and liver. Glycogen changes can alter scale weight through associated water storage."
+  },
+  {
+    "id": "gut_content",
+    "label": "Gut Content",
+    "type": "masker",
+    "description": "Food and waste mass in the digestive tract, which can influence short-term scale weight."
+  },
+  {
+    "id": "sleep",
+    "label": "Sleep",
+    "type": "input",
+    "description": "Sleep duration and quality, used as a proxy for recovery, stress regulation and water retention risk."
+  },
+  {
+    "id": "sleep_quality",
+    "label": "Sleep Quality",
+    "type": "input",
+    "description": "A subjective rating of how well the user slept."
+  },
+  {
+    "id": "recovery",
+    "label": "Recovery",
+    "type": "mechanism",
+    "description": "The body's ability to recover from training, dieting and daily stress."
+  },
+  {
+    "id": "stress",
+    "label": "Stress",
+    "type": "context",
+    "description": "Psychological or physiological stress that may influence appetite, adherence, sleep and water retention."
+  },
+  {
+    "id": "weight_volatility",
+    "label": "Weight Volatility",
+    "type": "diagnostic_signal",
+    "description": "The degree of short-term fluctuation in scale weight."
+  },
+  {
+    "id": "plateau",
+    "label": "Plateau",
+    "type": "diagnosis",
+    "description": "A period where weight trend appears flat despite a reported deficit."
+  },
+  {
+    "id": "true_plateau",
+    "label": "True Plateau",
+    "type": "diagnosis",
+    "description": "A likely real stall in fat loss where expected loss and observed trend remain aligned poorly for long enough that masking is less likely."
+  },
+  {
+    "id": "masked_fat_loss",
+    "label": "Masked Fat Loss",
+    "type": "diagnosis",
+    "description": "A diagnosis where fat loss may be occurring but scale weight is temporarily hidden by water, glycogen or gut content."
+  },
+  {
+    "id": "reduced_expenditure",
+    "label": "Reduced Expenditure",
+    "type": "diagnosis",
+    "description": "A diagnosis where activity, NEAT or training energy may have fallen enough to reduce the expected calorie deficit."
+  },
+  {
+    "id": "adherence_drift",
+    "label": "Adherence Drift",
+    "type": "diagnosis",
+    "description": "A diagnosis where inconsistent calorie intake or incomplete logging may explain the gap between expected and observed weight loss."
+  },
+  {
+    "id": "recovery_masking",
+    "label": "Recovery Masking",
+    "type": "diagnosis",
+    "description": "A diagnosis where poor sleep, higher training stress or broader recovery strain may be increasing weight volatility and water retention."
+  }
+]
