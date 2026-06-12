@@ -26,6 +26,7 @@ import { analyseAdherence } from "../../analytics/adherence.js";
 import { analyseDeficit } from "../../analytics/deficit.js";
 import { analyseWeightSignal } from "../../analytics/weightSignal.js";
 import { buildTimeline } from "../../analytics/timeline.js";
+import { buildChartData } from "../../analytics/chartData.js";
 
 import { evaluateRules } from "../../rules/diagnosticEngine.js";
 
@@ -68,9 +69,7 @@ let currentRows = [];
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     appResources = await loadResources();
-
     currentRows = await loadInitialRows();
-
     renderFromRows(currentRows);
   } catch (error) {
     renderError(error);
@@ -257,6 +256,7 @@ export function runDiagnosticFromRows(rawRows, resources) {
   );
 
   const timelineSummary = generateTimelineSummary(timeline);
+  const chartData = buildChartData(rawRows, timeline);
 
   const report = generateDiagnosticReport({
     analytics,
@@ -285,6 +285,7 @@ export function runDiagnosticFromRows(rawRows, resources) {
     rankedExplanationChains,
     timeline,
     timelineSummary,
+    chartData,
     report,
     markdown
   });
@@ -306,6 +307,7 @@ export function runDiagnosticFromRows(rawRows, resources) {
     rankedExplanationChains,
     timeline,
     timelineSummary,
+    chartData,
     report,
     markdown
   };
@@ -372,6 +374,7 @@ function logDiagnostics(payload) {
   console.log("Ranked chains:", payload.rankedExplanationChains);
   console.log("Timeline:", payload.timeline);
   console.log("Timeline summary:", payload.timelineSummary);
+  console.log("Chart data:", payload.chartData);
 
   reportToConsole(payload.report);
 
