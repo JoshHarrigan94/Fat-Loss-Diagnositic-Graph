@@ -14,8 +14,12 @@ export function renderDashboard(result, actions = {}) {
     weightSignal,
     diagnoses,
     prediction,
+    regressionPrediction,
+    regressionModel,
     graph,
     markdown,
+    timelineSummary,
+    rankedExplanationChains,
     importSummary,
     importWarnings
   } = result;
@@ -31,7 +35,10 @@ export function renderDashboard(result, actions = {}) {
       ${renderDeficitMetrics(deficit)}
       ${renderAdherenceMetrics(adherence)}
       ${renderPredictionMetrics(prediction)}
+      ${renderRegressionPanel(regressionPrediction, regressionModel)}
+      ${renderTimelinePanel(timelineSummary)}
       ${renderDiagnosticGrid(report, diagnoses)}
+      ${renderGraphReasoningPanel(rankedExplanationChains)}
       ${renderGraphPanel(subgraph)}
       ${renderRecommendation(report)}
       ${renderActions()}
@@ -163,6 +170,90 @@ function renderPredictionMetrics(prediction) {
   `;
 }
 
+function renderRegressionPanel(regressionPrediction, regressionModel) {
+  if (!regressionPrediction?.available) {
+    return `
+      <section class="panel">
+        <div class="section-title">
+          <h2>ML prediction</h2>
+          <span>Regression model</span>
+        </div>
+        <p class="summary small">${escapeHtml(regressionPrediction?.reason || "Regression prediction unavailable.")}</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="panel">
+      <div class="section-title">
+        <h2>ML prediction</h2>
+        <span>${escapeHtml(regressionPrediction.modelType)}</span>
+      </div>
+
+      <section class="metrics-grid compact">
+        ${metricCard("Predicted 7d change", `${format(regressionPrediction.predictedChange7d)} kg`)}
+        ${metricCard("Predicted 7d weight", `${format(regressionPrediction.predictedWeight7d)} kg`)}
+        ${metricCard("ML confidence", `${regressionPrediction.confidence}%`)}
+        ${metricCard("Training rows", `${regressionModel.trainingRows}`)}
+      </section>
+
+      <div class="section-title nested">
+        <h2>Top model drivers</h2>
+        <span>Feature contributions</span>
+      </div>
+
+      <ul class="path-list">
+        ${
+          regressionPrediction.contributions?.length
+            ? regressionPrediction.contributions
+                .map((item) => `<li>${escapeHtml(formatLabel(item.feature))}: ${format(item.contribution, 3)}</li>`)
+                .join("")
+            : "<li>Not enough data for contribution analysis.</li>"
+        }
+      </ul>
+    </section>
+  `;
+}
+
+function renderTimelinePanel(timelineSummary) {
+  if (!timelineSummary?.available) {
+    return "";
+  }
+
+  return `
+    <section class="panel">
+      <div class="section-title">
+        <h2>Diagnostic timeline</h2>
+        <span>${timelineSummary.weeksAnalysed} week(s)</span>
+      </div>
+
+      <p class="summary small">${escapeHtml(timelineSummary.summary)}</p>
+
+      <div class="timeline-list">
+        ${timelineSummary.items
+          .map(
+            (item) => `
+              <article class="timeline-item">
+                <div>
+                  <p class="eyebrow">Week ${item.week}</p>
+                  <h3>${escapeHtml(item.diagnosis)}</h3>
+                  <p>${escapeHtml(item.dateRange)}</p>
+                </div>
+
+                <div class="timeline-metrics">
+                  <span>${item.confidence}% confidence</span>
+                  <span>${item.observedLoss} kg/wk observed</span>
+                  <span>${item.maskingRisk} masking</span>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderDiagnosticGrid(report, diagnoses) {
   return `
     <section class="content-grid">
@@ -187,6 +278,28 @@ function renderDiagnosticGrid(report, diagnoses) {
           ${report.graphPaths.map((path) => `<li>${escapeHtml(path)}</li>`).join("")}
         </ul>
       </article>
+    </section>
+  `;
+}
+
+function renderGraphReasoningPanel(rankedExplanationChains = []) {
+  return `
+    <section class="panel">
+      <div class="section-title">
+        <h2>Graph reasoning</h2>
+        <span>Ranked explanation chains</span>
+      </div>
+
+      <ul class="path-list">
+        ${
+          rankedExplanationChains.length
+            ? rankedExplanationChains
+                .slice(0, 5)
+                .map((chain) => `<li>${escapeHtml(chain.chain)} <strong>(${chain.score})</strong></li>`)
+                .join("")
+            : "<li>No ranked graph reasoning available.</li>"
+        }
+      </ul>
     </section>
   `;
 }
