@@ -1,58 +1,47 @@
-/**
- * index.js
- *
- * Public entry point for the Fat Loss Knowledge Base.
- *
- * Purpose:
- * - Expose ontology schema
- * - Expose taxonomy
- * - Provide a clean import surface for future app integration
- */
-
 export {
   NODE_TYPES,
   getNodeType,
   listNodeTypes,
   isValidNodeType
-} from "./schema/nodeTypes.js";
+} from "./nodeTypes.js";
 
 export {
   EDGE_TYPES,
   getEdgeType,
   listEdgeTypes,
   isValidEdgeType
-} from "./schema/edgeTypes.js";
+} from "./edgeTypes.js";
 
 export {
   POPULATIONS,
   getPopulation,
   listPopulations,
   isValidPopulation
-} from "./schema/populations.js";
+} from "./populations.js";
 
 export {
   DOMAIN_TAXONOMY,
   getDomain,
   listDomains,
   isValidDomain
-} from "./schema/domainTaxonomy.js";
+} from "./domainTaxonomy.js";
 
 export {
   validateNode,
   validateNodes
-} from "./schema/nodeSchema.js";
+} from "./nodeSchema.js";
 
 export {
   validateEdge,
   validateEdges
-} from "./schema/edgeSchema.js";
+} from "./edgeSchema.js";
 
 export {
   EVIDENCE_LEVELS,
   getEvidenceLevel,
   listEvidenceLevels,
   isValidEvidenceLevel
-} from "./schema/evidenceLevels.js";
+} from "./evidenceLevels.js";
 
 export {
   CONFIDENCE_BANDS,
@@ -60,4 +49,4 @@ export {
   scoreFromEvidenceLevel,
   combineConfidenceScores,
   adjustConfidenceForPopulation
-} from "./schema/confidence.js";
+} from "./confidence.js";
