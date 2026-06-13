@@ -2,11 +2,6 @@
  * validateKnowledgeBase.js
  *
  * Validation runner for the standalone Fat Loss Knowledge Base.
- *
- * Purpose:
- * - Validate domain nodes
- * - Validate domain edges
- * - Catch missing fields, broken references and weak metadata
  */
 
 import {
@@ -15,50 +10,35 @@ import {
 } from "./schema/index.js";
 
 import {
-  WATER_SCALE_NOISE_DOMAIN
-} from "./domains/water-scale-noise/index.js";
+  listKnowledgeDomains,
+  getAllKnowledgeNodes,
+  getAllKnowledgeEdges
+} from "./domains/index.js";
 
 export function validateKnowledgeBase() {
-  const domains = [
-    WATER_SCALE_NOISE_DOMAIN
-  ];
-
-  const nodes = domains.flatMap((domain) => domain.nodes);
-  const edges = domains.flatMap((domain) => domain.edges);
+  const domains = listKnowledgeDomains();
+  const nodes = getAllKnowledgeNodes();
+  const edges = getAllKnowledgeEdges();
 
   const nodeValidation = validateNodes(nodes);
   const edgeValidation = validateEdges(edges, nodes);
 
   return {
-    valid:
-      nodeValidation.valid &&
-      edgeValidation.valid,
+    valid: nodeValidation.valid && edgeValidation.valid,
+    domainCount: domains.length,
     nodeCount: nodes.length,
     edgeCount: edges.length,
     nodeValidation,
     edgeValidation,
-    summary: buildValidationSummary({
-      nodeValidation,
-      edgeValidation,
-      nodes,
-      edges
-    })
-  };
-}
-
-function buildValidationSummary({
-  nodeValidation,
-  edgeValidation,
-  nodes,
-  edges
-}) {
-  return {
-    nodes: nodes.length,
-    edges: edges.length,
-    nodeErrors: nodeValidation.errors.length,
-    nodeWarnings: nodeValidation.warnings.length,
-    edgeErrors: edgeValidation.errors.length,
-    edgeWarnings: edgeValidation.warnings.length
+    summary: {
+      domains: domains.length,
+      nodes: nodes.length,
+      edges: edges.length,
+      nodeErrors: nodeValidation.errors.length,
+      nodeWarnings: nodeValidation.warnings.length,
+      edgeErrors: edgeValidation.errors.length,
+      edgeWarnings: edgeValidation.warnings.length
+    }
   };
 }
 
