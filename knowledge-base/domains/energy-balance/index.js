@@ -37,3 +37,5 @@ export function getEnergyBalanceNodes() {
 export function getEnergyBalanceEdges() {
   return ENERGY_BALANCE_EDGES;
 }
+
+export default ENERGY_BALANCE_DOMAIN;
