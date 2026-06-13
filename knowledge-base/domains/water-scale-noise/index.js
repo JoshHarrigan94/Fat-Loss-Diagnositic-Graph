@@ -42,3 +42,5 @@ export function getWaterScaleNoiseNodes() {
 export function getWaterScaleNoiseEdges() {
   return WATER_SCALE_NOISE_EDGES;
 }
+
+export default WATER_SCALE_NOISE_DOMAIN;
