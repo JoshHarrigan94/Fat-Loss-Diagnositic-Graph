@@ -188,28 +188,25 @@ export const WATER_SCALE_NOISE_EDGES = [
   },
 
   {
-    source: "water_retention",
-    target: "recovery_water_retention",
-    relationship: "subtype_of",
-    domain: "water_scale_noise",
-    description:
-      "Recovery-driven water retention is a subtype of water retention.",
-    evidenceLevel: "mechanistic_evidence",
-    confidence: 80,
-    populationApplicability: ["all"],
-    mechanismStrength: "high"
-  },
-
-  {
-    source: "water_retention",
-    target: "dietary_water_retention",
-    relationship: "subtype_of",
-    domain: "water_scale_noise",
-    description:
-      "Dietary water retention is a subtype of water retention.",
-    evidenceLevel: "mechanistic_evidence",
-    confidence: 80,
-    populationApplicability: ["all"],
-    mechanismStrength: "high"
-  }
+  "source": "recovery_water_retention",
+  "target": "water_retention",
+  "relationship": "subtype_of",
+  "domain": "water_scale_noise",
+  "description": "Recovery-driven water retention is a subtype of water retention.",
+  "evidenceLevel": "mechanistic_evidence",
+  "confidence": 80,
+  "populationApplicability": ["all"],
+  "mechanismStrength": "high"
+},
+{
+  "source": "dietary_water_retention",
+  "target": "water_retention",
+  "relationship": "subtype_of",
+  "domain": "water_scale_noise",
+  "description": "Dietary water retention is a subtype of water retention.",
+  "evidenceLevel": "mechanistic_evidence",
+  "confidence": 80,
+  "populationApplicability": ["all"],
+  "mechanismStrength": "high"
+}
 ];
