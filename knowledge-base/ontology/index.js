@@ -40,3 +40,8 @@ export {
   getDiagnosticMapItem,
   listDiagnosticMapItems
 } from "./diagnosticEngineMap.js";
+
+export {
+  selectReasoningPathway,
+  selectReasoningPathwayByProblem
+} from "./pathwaySelector.js";
