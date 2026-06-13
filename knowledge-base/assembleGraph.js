@@ -5,22 +5,41 @@
  */
 
 import {
-  getAllKnowledgeNodes,
-  getAllKnowledgeEdges
+  KNOWLEDGE_DOMAINS
 } from "./domains/index.js";
 
+import {
+  sharedDecisionNodes
+} from "./ontology/sharedDecisionNodes.js";
+
 export function assembleKnowledgeGraph() {
-  const nodes = dedupeNodes(getAllKnowledgeNodes());
-  const edges = getAllKnowledgeEdges();
+
+  const domainNodes =
+    KNOWLEDGE_DOMAINS.flatMap(
+      domain => domain.nodes || []
+    );
+
+  const domainEdges =
+    KNOWLEDGE_DOMAINS.flatMap(
+      domain => domain.edges || []
+    );
 
   return {
-    id: "fat_loss_knowledge_graph",
-    label: "Fat Loss Knowledge Graph",
-    version: "1.0.0",
-    nodeCount: nodes.length,
-    edgeCount: edges.length,
-    nodes,
-    edges
+    nodes: [
+      ...sharedDecisionNodes,
+      ...domainNodes
+    ],
+
+    edges: domainEdges,
+
+    metadata: {
+      domainCount: KNOWLEDGE_DOMAINS.length,
+      nodeCount:
+        sharedDecisionNodes.length +
+        domainNodes.length,
+      edgeCount:
+        domainEdges.length
+    }
   };
 }
 
