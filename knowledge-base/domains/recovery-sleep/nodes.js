@@ -193,7 +193,7 @@ export const recoverySleepNodes = [
   },
 
   {
-    id: "circadian_regularitу",
+    id: "circadian_regularity",
     label: "Circadian Regularity",
     type: "recovery_pattern",
     domain: "recovery-sleep",
