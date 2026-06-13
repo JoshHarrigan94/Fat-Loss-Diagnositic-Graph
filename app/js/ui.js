@@ -318,6 +318,85 @@ function renderWeightSignalMetrics(weightSignal) {
   `;
 }
 
+function renderKnowledgePanel(knowledgeSummary) {
+  if (!knowledgeSummary?.available) {
+    return `
+      <section class="panel knowledge-panel">
+        <div class="section-title">
+          <h2>Diagnostic knowledge layer</h2>
+          <span>Domain reasoning</span>
+        </div>
+        <p class="summary small">No diagnostic knowledge interpretation available.</p>
+      </section>
+    `;
+  }
+
+  const strongest = knowledgeSummary.strongestDomain;
+
+  return `
+    <section class="panel knowledge-panel">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Diagnostic knowledge layer</p>
+          <h2>${escapeHtml(strongest.title)}</h2>
+        </div>
+        <span>${strongest.confidence}% confidence</span>
+      </div>
+
+      <p class="summary small">${escapeHtml(knowledgeSummary.summary)}</p>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card primary">
+          <p class="eyebrow">Recommended next move</p>
+          <h3>${escapeHtml(knowledgeSummary.recommendation)}</h3>
+        </article>
+
+        <article class="knowledge-card">
+          <p class="eyebrow">Supporting signals</p>
+          ${
+            strongest.supporting.length
+              ? `<ul>${strongest.supporting.map((signal) => `<li>${escapeHtml(formatLabel(signal))}</li>`).join("")}</ul>`
+              : `<p>No strong supporting signals.</p>`
+          }
+        </article>
+
+        <article class="knowledge-card">
+          <p class="eyebrow">Weakening signals</p>
+          ${
+            strongest.weakening.length
+              ? `<ul>${strongest.weakening.map((signal) => `<li>${escapeHtml(formatLabel(signal))}</li>`).join("")}</ul>`
+              : `<p>No strong weakening signals.</p>`
+          }
+        </article>
+      </div>
+
+      <div class="section-title nested">
+        <h2>Competing diagnostic domains</h2>
+        <span>${knowledgeSummary.rankedDomains.length} domains</span>
+      </div>
+
+      <div class="domain-list">
+        ${knowledgeSummary.rankedDomains
+          .map(
+            (domain) => `
+              <article class="domain-row">
+                <div>
+                  <h3>${escapeHtml(domain.title)}</h3>
+                  <p>${escapeHtml(domain.description)}</p>
+                </div>
+                <div class="domain-score">
+                  <span>${domain.score}</span>
+                  <small>${domain.confidence}%</small>
+                </div>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderChartPanels(chartData) {
   if (!chartData) return "";
 
