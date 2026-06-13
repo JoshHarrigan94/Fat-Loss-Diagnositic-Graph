@@ -21,3 +21,7 @@ export {
   getAllKnowledgeNodes,
   getAllKnowledgeEdges
 } from "./domains/index.js";
+
+export {
+  assembleKnowledgeGraph
+} from "./assembleGraph.js";
