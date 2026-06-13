@@ -54,6 +54,7 @@ export function renderDashboard(result, actions = {}) {
       ${renderDataTable(rawRows)}
       ${renderCoreMetrics(report)}
       ${renderWeightSignalMetrics(weightSignal)}
+      ${renderKnowledgePanel(knowledgeSummary)}
       ${renderChartPanels(chartData)}
       ${renderDeficitMetrics(deficit)}
       ${renderAdherenceMetrics(adherence)}
