@@ -28,3 +28,15 @@ export {
   listExpansionPhases,
   getExpansionPhase
 } from "./graphExpansionPlan.js";
+
+export {
+  REASONING_PATHWAYS,
+  listReasoningPathways,
+  getReasoningPathway
+} from "./reasoningPathways.js";
+
+export {
+  DIAGNOSTIC_ENGINE_MAP,
+  getDiagnosticMapItem,
+  listDiagnosticMapItems
+} from "./diagnosticEngineMap.js";
