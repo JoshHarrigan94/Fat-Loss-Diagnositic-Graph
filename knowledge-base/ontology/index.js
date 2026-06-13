@@ -45,3 +45,7 @@ export {
   selectReasoningPathway,
   selectReasoningPathwayByProblem
 } from "./pathwaySelector.js";
+
+export {
+  buildDiagnosticRoute
+} from "./diagnosticRouteBuilder.js";
