@@ -1,6 +1,7 @@
 {
   "name": "fat-loss-diagnostic-graph",
   "version": "0.1.0",
+  "type": "module",
   "description": "Explainable fat loss diagnostic engine using statistics, rules, knowledge graphs and lightweight prediction.",
   "main": "app/index.html",
   "scripts": {
