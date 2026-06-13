@@ -54,6 +54,8 @@ import {
   rankPathwaysBySignals
 } from "../../graph/pathwayExplorer.js";
 
+import { interpretKnowledge } from "../../knowledge/knowledgeInterpreter.js";
+
 import { predictWeightTrend } from "../../ml/prediction.js";
 
 import {
@@ -93,6 +95,11 @@ import {
   generateMLSummary,
   mlSummaryToMarkdown
 } from "../../reports/mlReport.js";
+
+import {
+  generateKnowledgeSummary,
+  knowledgeSummaryToMarkdown
+} from "../../reports/knowledgeReport.js";
 
 let appResources = null;
 let currentRows = [];
@@ -245,6 +252,9 @@ export function runDiagnosticFromRows(rawRows, resources) {
   const diagnoses = evaluateRules(resources.rules, analytics.signals);
   const graph = createGraph(resources.nodes, resources.edges);
 
+  const knowledgeInterpretation = interpretKnowledge(analytics.signals);
+  const knowledgeSummary = generateKnowledgeSummary(knowledgeInterpretation);
+
   const prediction = predictWeightTrend(analytics);
 
   const regressionModel = trainRegressionModel(rawRows, USER_CONFIG);
@@ -338,6 +348,7 @@ export function runDiagnosticFromRows(rawRows, resources) {
 
   const markdown = [
     reportToMarkdown(report),
+    knowledgeSummaryToMarkdown(knowledgeSummary),
     timelineSummaryToMarkdown(timelineSummary),
     graphReasoningToMarkdown(graphReasoningSummary),
     mlSummaryToMarkdown(mlSummary),
@@ -351,6 +362,8 @@ export function runDiagnosticFromRows(rawRows, resources) {
     weightSignal,
     diagnoses,
     graph,
+    knowledgeInterpretation,
+    knowledgeSummary,
     prediction,
     regressionModel,
     regressionPrediction,
@@ -382,6 +395,8 @@ export function runDiagnosticFromRows(rawRows, resources) {
     weightSignal,
     diagnoses,
     graph,
+    knowledgeInterpretation,
+    knowledgeSummary,
     prediction,
     regressionModel,
     regressionPrediction,
@@ -458,6 +473,8 @@ function logDiagnostics(payload) {
   console.log("Deficit:", payload.deficit);
   console.log("Weight signal:", payload.weightSignal);
   console.log("Diagnoses:", payload.diagnoses);
+  console.log("Knowledge interpretation:", payload.knowledgeInterpretation);
+  console.log("Knowledge summary:", payload.knowledgeSummary);
   console.log("Prediction:", payload.prediction);
   console.log("Regression model:", payload.regressionModel);
   console.log("Regression prediction:", payload.regressionPrediction);
