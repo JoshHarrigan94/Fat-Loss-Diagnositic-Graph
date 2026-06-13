@@ -49,3 +49,8 @@ export {
 export {
   buildDiagnosticRoute
 } from "./diagnosticRouteBuilder.js";
+import { sharedDecisionNodes } from "./sharedDecisionNodes.js";
+
+export const ontology = {
+  sharedDecisionNodes
+};
