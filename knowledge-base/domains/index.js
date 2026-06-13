@@ -9,7 +9,8 @@ import {
 } from "./water-scale-noise/index.js";
 
 export const KNOWLEDGE_DOMAINS = [
-  WATER_SCALE_NOISE_DOMAIN
+  WATER_SCALE_NOISE_DOMAIN,
+  ENERGY_BALANCE_DOMAIN
 ];
 
 export function listKnowledgeDomains() {
@@ -30,3 +31,7 @@ export function getAllKnowledgeNodes() {
 export function getAllKnowledgeEdges() {
   return KNOWLEDGE_DOMAINS.flatMap((domain) => domain.edges);
 }
+
+import {
+  ENERGY_BALANCE_DOMAIN
+} from "./energy-balance/index.js";
