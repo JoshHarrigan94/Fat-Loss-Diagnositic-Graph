@@ -141,6 +141,30 @@ export const EDGE_TYPES = {
       "type_2_diabetes modifies carbohydrate_strategy"
     ]
   },
+  
+  prioritises: {
+  id: "prioritises",
+  label: "Prioritises",
+  description:
+    "The source increases the priority of the target in decision-making.",
+  direction: "source_to_target",
+  examples: [
+    "muscle_retention_goal prioritises resistance_training",
+    "recovery_water_retention prioritises sleep_consistency"
+  ]
+},
+
+constrains: {
+  id: "constrains",
+  label: "Constrains",
+  description:
+    "The source limits, restricts or shapes what can safely or realistically be done with the target.",
+  direction: "source_to_target",
+  examples: [
+    "youth_growth_phase constrains aggressive_deficit",
+    "limited_mobility constrains walking_plan"
+  ]
+},
 
   requires: {
     id: "requires",
