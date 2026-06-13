@@ -120,7 +120,7 @@ export const recoverySleepEdges = [
   },
 
   {
-    source: "circadian_regularitу",
+    source: "circadian_regularity",
     target: "sleep_quality",
     relationship: "supports",
     strength: "moderate",
@@ -132,7 +132,7 @@ export const recoverySleepEdges = [
   },
 
   {
-    source: "circadian_regularitу",
+    source: "circadian_regularity",
     target: "glucose_insulin_regulation",
     relationship: "supports",
     strength: "moderate",
