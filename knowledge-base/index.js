@@ -30,3 +30,10 @@ export {
   validateKnowledgeBase,
   logKnowledgeBaseValidation
 } from "./validateKnowledgeBase.js";
+
+export {
+  ENERGY_BALANCE_DOMAIN,
+  getEnergyBalanceDomain,
+  getEnergyBalanceNodes,
+  getEnergyBalanceEdges
+} from "./domains/energy-balance/index.js";
