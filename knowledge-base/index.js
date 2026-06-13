@@ -25,3 +25,8 @@ export {
 export {
   assembleKnowledgeGraph
 } from "./assembleGraph.js";
+
+export {
+  validateKnowledgeBase,
+  logKnowledgeBaseValidation
+} from "./validateKnowledgeBase.js";
