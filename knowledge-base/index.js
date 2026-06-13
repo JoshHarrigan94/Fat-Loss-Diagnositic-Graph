@@ -13,3 +13,11 @@ export {
   getWaterScaleNoiseNodes,
   getWaterScaleNoiseEdges
 } from "./domains/water-scale-noise/index.js";
+
+export {
+  KNOWLEDGE_DOMAINS,
+  listKnowledgeDomains,
+  getKnowledgeDomain,
+  getAllKnowledgeNodes,
+  getAllKnowledgeEdges
+} from "./domains/index.js";
