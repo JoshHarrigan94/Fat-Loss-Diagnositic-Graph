@@ -40,7 +40,8 @@ export function renderDashboard(result, actions = {}) {
     importSummary,
     importWarnings,
     entryErrors,
-    entrySuccess
+    entrySuccess,
+    knowledgeSummary
   } = result;
 
   const subgraph = createSubgraphForDiagnosis(graph, report.diagnosis.id);
