@@ -1,3 +1,4 @@
+import { renderInteractiveGraphExplorer } from "../../graph/interactiveGraphRenderer.js";
 import { createSubgraphForDiagnosis } from "../../graph/graphEngine.js";
 import { renderGraphSvg } from "../../graph/graphRenderer.js";
 import { downloadMarkdownReport } from "../../reports/downloadReport.js";
@@ -67,6 +68,7 @@ export function renderDashboard(result, actions = {}) {
       ${renderInterventions(interventionExplanation)}
       ${renderGraphReasoningPanel(rankedExplanationChains)}
       ${renderGraphPanel(subgraph)}
+      ${renderInteractiveGraphExplorer(graph)}
       ${renderRecommendation(report)}
       ${renderActions()}
       ${renderSignalAudit(analytics)}
