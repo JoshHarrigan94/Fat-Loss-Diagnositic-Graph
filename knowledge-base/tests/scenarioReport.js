@@ -167,3 +167,19 @@ results.forEach(result => {
   .forEach(([strategy, count]) => {
     console.log(`${strategy}: ${count}`);
   });
+  
+  console.log("\nConfidence Distribution");
+console.log("-----------------------");
+
+const confidenceCounts = new Map();
+
+results.forEach(result => {
+  const label = result.diagnosis.confidenceProfile?.overall?.label || "unknown";
+  confidenceCounts.set(label, (confidenceCounts.get(label) || 0) + 1);
+});
+
+[...confidenceCounts.entries()]
+  .sort((a, b) => b[1] - a[1])
+  .forEach(([label, count]) => {
+    console.log(`${label}: ${count}`);
+  });
