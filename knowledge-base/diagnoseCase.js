@@ -1,7 +1,9 @@
 import { assembleKnowledgeGraph } from "./assembleGraph.js";
 import {
   mapInputsToSignals,
-  activateGraphFromSignals
+  activateGraphFromSignals,
+  buildReasoningRoutes,
+  summariseReasoningRoutes
 } from "./reasoning/index.js";
 
 function unique(values) {
@@ -140,5 +142,17 @@ export function diagnoseCase(userCase) {
     recommendationMode
   };
 }
+
+const reasoningRoutes = buildReasoningRoutes(
+  graph,
+  activationResult,
+  {
+    maxDepth: 3,
+    stopAtDecisionNodes: true,
+    maxRoutesPerStartNode: 8
+  }
+);
+
+const routeSummary = summariseReasoningRoutes(reasoningRoutes);
 
 export default diagnoseCase;
