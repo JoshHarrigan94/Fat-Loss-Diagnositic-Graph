@@ -1,0 +1,19 @@
+{
+  "id": "type2-diabetes-hypoglycaemia-risk",
+  "label": "Type 2 diabetes with hypoglycaemia risk",
+  "inputs": {
+    "population": "type_2_diabetes",
+    "diabetesMedication": true,
+    "hypoglycaemiaRisk": true,
+    "carbohydrateRestrictionRequested": true,
+    "fastingRequested": true
+  },
+  "expectedRouteIncludes": [
+    "population_type2_diabetes",
+    "hypoglycaemia_risk",
+    "diabetes_medication_context",
+    "glucose_safety_risk",
+    "contraindication_unsupervised_fasting",
+    "strategy_medical_review"
+  ]
+}
