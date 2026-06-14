@@ -3,6 +3,7 @@ import { assembleKnowledgeGraph } from "./assembleGraph.js";
 import {
   mapInputsToSignals,
   extractLegacyKnowledgeSignals,
+  extractLegacyRuleSignals,
   activateGraphFromSignals,
   buildReasoningRoutes,
   summariseReasoningRoutes,
