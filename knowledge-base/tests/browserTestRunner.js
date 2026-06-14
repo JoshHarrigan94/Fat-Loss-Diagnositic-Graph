@@ -1,6 +1,7 @@
 import { assembleKnowledgeGraph } from "../assembleGraph.js";
 import { validateKnowledgeBase } from "../validateKnowledgeBase.js";
 import { diagnoseCase } from "../diagnoseCase.js";
+
 const fixturePaths = [
   "./fixtures/stalled-weight-good-adherence.json",
   "./fixtures/poor-sleep-water-retention.json",
@@ -13,16 +14,17 @@ async function loadFixtures() {
   return Promise.all(
     fixturePaths.map(async path => {
       const response = await fetch(path);
+
+      if (!response.ok) {
+        throw new Error(`Failed to load fixture: ${path}`);
+      }
+
       return response.json();
     })
   );
 }
 
-function nodeExists(graph, nodeId) {
-  return graph.nodes.some(node => node.id === nodeId);
-}
-
-function testFixtureRoutes(graph, fixtures) {
+function testFixtureRoutes(fixtures) {
   return fixtures.map(fixture => {
     const diagnosis = diagnoseCase(fixture);
 
@@ -49,28 +51,65 @@ function renderResults({ validation, graph, routeResults }) {
   const root = document.getElementById("test-output");
 
   const routeHtml = routeResults
-  .map(result => {
-    const status = result.passed ? "PASS" : "FAIL";
+    .map(result => {
+      const status = result.passed ? "PASS" : "FAIL";
+      const recommendation = result.diagnosis.recommendationPackage;
 
-    return `
-      <li>
-        <strong>${status}</strong> — ${result.label}
-        ${
-          result.missingExpectedNodes.length
-            ? `<br><small>Missing expected route nodes: ${result.missingExpectedNodes.join(", ")}</small>`
-            : ""
-        }
-        ${
-          result.missingGraphNodes.length
-            ? `<br><small>Activated nodes missing from graph: ${result.missingGraphNodes.join(", ")}</small>`
-            : ""
-        }
-        <br><small>Primary strategy: ${result.diagnosis.primaryStrategy || "none"}</small>
-        <br><small>Recommendation mode: ${result.diagnosis.recommendationMode}</small>
-      </li>
-    `;
-  })
-  .join("");
+      return `
+        <section style="border:1px solid #ddd; padding:1rem; margin-bottom:1rem;">
+          <h3>${status} — ${result.label}</h3>
+
+          ${
+            result.missingExpectedNodes.length
+              ? `<p><strong>Missing expected route nodes:</strong> ${result.missingExpectedNodes.join(", ")}</p>`
+              : ""
+          }
+
+          ${
+            result.missingGraphNodes.length
+              ? `<p><strong>Activated nodes missing from graph:</strong> ${result.missingGraphNodes.join(", ")}</p>`
+              : ""
+          }
+
+          <p><strong>Primary strategy:</strong> ${recommendation.primary.label}</p>
+          <p><strong>Recommendation mode:</strong> ${recommendation.modeLabel}</p>
+          <p><strong>Intensity:</strong> ${recommendation.intensity}</p>
+          <p><strong>Message:</strong> ${recommendation.primary.message}</p>
+          <p><strong>Next review:</strong> ${recommendation.nextReviewPoint}</p>
+
+          ${
+            recommendation.secondary.length
+              ? `<p><strong>Secondary:</strong> ${recommendation.secondary.map(item => item.label).join(", ")}</p>`
+              : ""
+          }
+
+          ${
+            recommendation.delayed.length
+              ? `<p><strong>Delayed:</strong> ${recommendation.delayed.map(item => `${item.label} — ${item.reason}`).join("<br>")}</p>`
+              : ""
+          }
+
+          ${
+            recommendation.blocked.length
+              ? `<p><strong>Blocked:</strong> ${recommendation.blocked.map(item => `${item.label} — ${item.reason}`).join("<br>")}</p>`
+              : ""
+          }
+
+          ${
+            recommendation.safetyCaveats.length
+              ? `<p><strong>Safety caveats:</strong><br>${recommendation.safetyCaveats.join("<br>")}</p>`
+              : ""
+          }
+
+          ${
+            recommendation.monitoringGuidance.length
+              ? `<p><strong>Monitoring guidance:</strong><br>${recommendation.monitoringGuidance.join("<br>")}</p>`
+              : ""
+          }
+        </section>
+      `;
+    })
+    .join("");
 
   root.innerHTML = `
     <h1>Fat Loss Knowledge Graph Tests</h1>
@@ -85,8 +124,8 @@ function renderResults({ validation, graph, routeResults }) {
     <p><strong>Edges:</strong> ${graph.edges.length}</p>
     <p><strong>Domains:</strong> ${graph.metadata.domainCount}</p>
 
-    <h2>Fixture Route Coverage</h2>
-    <ul>${routeHtml}</ul>
+    <h2>Fixture Diagnosis Results</h2>
+    ${routeHtml}
   `;
 }
 
@@ -95,7 +134,7 @@ async function run() {
   const validation = validateKnowledgeBase();
   const fixtures = await loadFixtures();
 
-  const routeResults = testFixtureRoutes(graph, fixtures);
+  const routeResults = testFixtureRoutes(fixtures);
 
   renderResults({
     validation,
