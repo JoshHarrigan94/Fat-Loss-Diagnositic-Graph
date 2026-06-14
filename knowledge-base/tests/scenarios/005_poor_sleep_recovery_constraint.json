@@ -1,0 +1,31 @@
+{
+  "id": "005_poor_sleep_recovery_constraint",
+  "label": "Poor sleep creates recovery bottleneck",
+  "family": "recovery_constraints",
+  "difficulty": "basic",
+  "case": {
+    "inputs": {
+      "weightTrend": "stable",
+      "sleepQuality": "low",
+      "stressLoad": "high",
+      "hungerPressure": "high",
+      "stepCountConsistency": "low",
+      "trainingPerformance": "declining"
+    }
+  },
+  "expected": {
+    "primaryIssue": "poor_sleep_recovery_constraint",
+    "recommendationMode": "recommendation_mode_monitor_only",
+    "primaryStrategy": "strategy_recovery_repair",
+    "shouldInclude": [
+      "sleep_quality",
+      "stress_load",
+      "hunger_pressure",
+      "performance_decline_during_deficit",
+      "strategy_recovery_repair"
+    ],
+    "shouldAvoid": [
+      "strategy_activity_increase"
+    ]
+  }
+}
