@@ -1,3 +1,7 @@
+import {
+  getLegacyInterventionLevers
+} from "./legacyGraphAdapter.js";
+
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -215,6 +219,25 @@ function buildNextReviewPoint({
   return "After 1–2 weeks of consistent execution.";
 }
 
+function buildTacticalLevers({
+  primaryStrategy,
+  secondaryStrategies = [],
+  activatedNodeIds = []
+}) {
+  const strategyIds = unique([
+    primaryStrategy,
+    ...secondaryStrategies
+  ]);
+
+  return strategyIds.flatMap(strategyId =>
+    getLegacyInterventionLevers(strategyId, activatedNodeIds).map(lever => ({
+      ...lever,
+      strategy: strategyId,
+      strategyLabel: getStrategyLabel(strategyId)
+    }))
+  );
+}
+
 export function buildRecommendationPackage(diagnosis) {
   const {
     recommendationMode,
@@ -225,7 +248,8 @@ export function buildRecommendationPackage(diagnosis) {
     likelyIssues = [],
     confidenceFlags = [],
     riskFlags = [],
-    contraindications = []
+    contraindications = [],
+    activatedNodeIds = []
   } = diagnosis;
 
   const modeLabel = getModeLabel(recommendationMode);
@@ -244,6 +268,12 @@ export function buildRecommendationPackage(diagnosis) {
     primaryStrategy
   });
 
+  const tacticalLevers = buildTacticalLevers({
+    primaryStrategy,
+    secondaryStrategies,
+    activatedNodeIds
+  });
+
   return {
     mode: recommendationMode,
     modeLabel,
@@ -259,6 +289,8 @@ export function buildRecommendationPackage(diagnosis) {
       strategy,
       label: getStrategyLabel(strategy)
     })),
+
+    tacticalLevers,
 
     delayed: delayedStrategies.map(strategy => ({
       strategy: strategy.id,
