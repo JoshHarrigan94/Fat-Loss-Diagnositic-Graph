@@ -1,7 +1,3 @@
-function hasValue(value) {
-  return value !== undefined && value !== null && value !== false;
-}
-
 function signal(nodeId, reason, confidence = "moderate", metadata = {}) {
   return {
     nodeId,
@@ -20,41 +16,48 @@ export function mapInputsToSignals(userCase) {
    */
   if (inputs.population === "type_2_diabetes") {
     signals.push(
-      signal(
-        "population_type2_diabetes",
-        "User is in a type 2 diabetes context.",
-        "high"
-      ),
-      signal(
-        "priority_glucose_control",
-        "Glucose control should be prioritised.",
-        "high"
-      )
+      signal("population_type2_diabetes", "User is in a type 2 diabetes context.", "high"),
+      signal("priority_glucose_control", "Glucose control should be prioritised.", "high")
     );
   }
 
   if (inputs.population === "bodybuilder") {
     signals.push(
-      signal(
-        "population_bodybuilder",
-        "User is in a bodybuilding context.",
-        "high"
-      ),
-      signal(
-        "priority_lean_mass_retention",
-        "Lean mass retention should be prioritised.",
-        "high"
-      )
+      signal("population_bodybuilder", "User is in a bodybuilding context.", "high"),
+      signal("priority_lean_mass_retention", "Lean mass retention should be prioritised.", "high")
+    );
+  }
+
+  if (inputs.population === "older_adult") {
+    signals.push(
+      signal("population_older_adult", "User is in an older adult context.", "high"),
+      signal("priority_functional_independence", "Functional independence should be prioritised.", "high"),
+      signal("priority_lean_mass_retention", "Lean mass retention should be prioritised.", "high"),
+      signal("sarcopenia_risk", "Older adult context increases relevance of sarcopenia risk.", "moderate")
     );
   }
 
   if (inputs.bodyFatContext === "lean") {
     signals.push(
-      signal(
-        "population_lean",
-        "User appears to be in a leaner fat-loss context.",
-        "moderate"
-      )
+      signal("population_lean", "User appears to be in a leaner fat-loss context.", "moderate")
+    );
+  }
+
+  /**
+   * Plateau / energy deficit interpretation
+   */
+  if (
+    inputs.weightTrend === "stable" &&
+    inputs.scaleWeightVariability === "low" &&
+    ["moderate", "high"].includes(inputs.calorieTrackingAccuracy) &&
+    ["moderate", "high"].includes(inputs.adherenceConsistency) &&
+    ["moderate", "high"].includes(inputs.stepCountConsistency) &&
+    inputs.sleepQuality !== "low" &&
+    inputs.stressLoad !== "high"
+  ) {
+    signals.push(
+      signal("weekly_energy_deficit", "Stable weight with low noise and reasonable adherence suggests the weekly deficit may be insufficient.", "moderate"),
+      signal("strategy_calorie_adjustment", "Calorie adjustment may be appropriate if risk remains low.", "moderate")
     );
   }
 
@@ -63,94 +66,64 @@ export function mapInputsToSignals(userCase) {
    */
   if (inputs.weightTrend === "stable") {
     signals.push(
-      signal(
-        "weight_trend_confidence",
-        "Stable weight trend requires confidence assessment.",
-        "moderate"
-      )
+      signal("weight_trend_confidence", "Stable weight trend requires confidence assessment.", "moderate")
     );
   }
 
   if (inputs.scaleWeightVariability === "high") {
     signals.push(
-      signal(
-        "scale_weight_variability",
-        "High scale variability may reduce confidence in short-term trend interpretation.",
-        "moderate"
-      ),
-      signal(
-        "measurement_noise_interpretation",
-        "Scale data may require measurement-noise interpretation.",
-        "moderate"
-      )
+      signal("scale_weight_variability", "High scale variability may reduce confidence in short-term trend interpretation.", "moderate"),
+      signal("measurement_noise_interpretation", "Scale data may require measurement-noise interpretation.", "moderate")
     );
   }
 
   if (inputs.scaleSpike) {
     signals.push(
-      signal(
-        "scale_weight_variability",
-        "A scale spike may reflect temporary weight variability rather than fat gain.",
-        "moderate"
-      )
+      signal("scale_weight_variability", "A scale spike may reflect temporary weight variability rather than fat gain.", "moderate")
     );
   }
 
   if (inputs.calorieTrackingAccuracy === "low" || inputs.missedLogs) {
     signals.push(
-      signal(
-        "calorie_tracking_accuracy",
-        "Reported intake may not accurately reflect actual intake.",
-        "high"
-      ),
-      signal(
-        "energy_intake_estimate",
-        "Energy intake estimate requires improved confidence.",
-        "high"
-      )
+      signal("calorie_tracking_accuracy", "Reported intake may not accurately reflect actual intake.", "high"),
+      signal("energy_intake_estimate", "Energy intake estimate requires improved confidence.", "high")
     );
   }
 
   if (inputs.weekendAdherenceGap) {
     signals.push(
-      signal(
-        "weekend_adherence_gap",
-        "Weekend intake or behaviour may reduce the weekly deficit.",
-        "high"
-      )
+      signal("weekend_adherence_gap", "Weekend intake or behaviour may reduce the weekly deficit.", "high")
     );
   }
 
   if (inputs.liquidCalories) {
     signals.push(
-      signal(
-        "liquid_calorie_exposure",
-        "Liquid calories may reduce satiety and erode the weekly deficit.",
-        "moderate"
-      )
+      signal("liquid_calorie_exposure", "Liquid calories may reduce satiety and erode the weekly deficit.", "moderate")
     );
   }
 
   /**
-   * Sleep, stress, and recovery
+   * Adherence
+   */
+  if (inputs.adherenceConsistency === "declining") {
+    signals.push(
+      signal("adherence_consistency", "Adherence consistency appears to be declining.", "moderate"),
+      signal("fatigue_driven_adherence_decline", "Adherence decline may be fatigue-driven.", "moderate")
+    );
+  }
+
+  /**
+   * Sleep, stress, recovery
    */
   if (inputs.sleepQuality === "low") {
     signals.push(
-      signal(
-        "sleep_quality",
-        "Poor sleep may reduce recovery and increase appetite pressure.",
-        "high"
-      )
+      signal("sleep_quality", "Poor sleep may reduce recovery and increase appetite pressure.", "high")
     );
   }
 
   if (inputs.stressLoad === "high") {
     signals.push(
-      signal(
-        "stress_load",
-        "High stress may impair recovery, appetite regulation, and adherence.",
-        "moderate"
-      )
+      signal("stress_load", "High stress may impair recovery, appetite regulation, and adherence.", "moderate")
     );
   }
 
@@ -159,21 +132,47 @@ export function mapInputsToSignals(userCase) {
     (inputs.sleepQuality === "low" || inputs.stressLoad === "high")
   ) {
     signals.push(
-      signal(
-        "water_retention_from_stress",
-        "Scale spike may reflect stress or sleep-related water retention.",
-        "moderate"
-      )
+      signal("water_retention_from_stress", "Scale spike may reflect stress or sleep-related water retention.", "moderate")
     );
   }
 
   if (inputs.trainingSoreness === "high") {
     signals.push(
-      signal(
-        "training_inflammation_shift",
-        "Training soreness may temporarily increase water retention.",
-        "moderate"
-      )
+      signal("training_inflammation_shift", "Training soreness may temporarily increase water retention.", "moderate")
+    );
+  }
+
+  /**
+   * Nutrition quality
+   */
+  if (inputs.proteinAdequacy === "low") {
+    signals.push(
+      signal("protein_adequacy", "Protein intake may be inadequate for lean mass retention.", "high"),
+      signal("nutrition_quality", "Nutrition quality may need improvement.", "moderate")
+    );
+  }
+
+  if (inputs.fibreAdequacy === "low") {
+    signals.push(
+      signal("fibre_adequacy", "Fibre intake may be inadequate for satiety and metabolic health.", "moderate"),
+      signal("nutrition_quality", "Nutrition quality may need improvement.", "moderate")
+    );
+  }
+
+  /**
+   * Training and injury
+   */
+  if (inputs.resistanceTrainingQuality === "low") {
+    signals.push(
+      signal("resistance_training_quality", "Resistance training quality may be insufficient to protect lean mass.", "high"),
+      signal("training_goal_alignment", "Training may need to better match the body-composition goal.", "moderate")
+    );
+  }
+
+  if (inputs.injuryRisk === "moderate" || inputs.injuryRisk === "high") {
+    signals.push(
+      signal("injury_risk_from_training", "Injury risk may modify exercise recommendations.", "moderate"),
+      signal("constraint_high_injury_risk", "Exercise progression may need conservative modification.", "moderate")
     );
   }
 
@@ -182,46 +181,26 @@ export function mapInputsToSignals(userCase) {
    */
   if (inputs.diabetesMedication) {
     signals.push(
-      signal(
-        "diabetes_medication_context",
-        "Diabetes medication may modify glucose safety.",
-        "high"
-      )
+      signal("diabetes_medication_context", "Diabetes medication may modify glucose safety.", "high")
     );
   }
 
   if (inputs.hypoglycaemiaRisk) {
     signals.push(
-      signal(
-        "hypoglycaemia_risk",
-        "Hypoglycaemia risk makes fasting, carbohydrate restriction, and exercise changes safety-sensitive.",
-        "high"
-      ),
-      signal(
-        "glucose_safety_risk",
-        "Glucose safety risk is elevated.",
-        "high"
-      )
+      signal("hypoglycaemia_risk", "Hypoglycaemia risk makes fasting, carbohydrate restriction, and exercise changes safety-sensitive.", "high"),
+      signal("glucose_safety_risk", "Glucose safety risk is elevated.", "high")
     );
   }
 
   if (inputs.fastingRequested) {
     signals.push(
-      signal(
-        "contraindication_unsupervised_fasting",
-        "Fasting request should be screened for contraindications.",
-        inputs.hypoglycaemiaRisk ? "high" : "moderate"
-      )
+      signal("contraindication_unsupervised_fasting", "Fasting request should be screened for contraindications.", inputs.hypoglycaemiaRisk ? "high" : "moderate")
     );
   }
 
   if (inputs.carbohydrateRestrictionRequested) {
     signals.push(
-      signal(
-        "contraindication_carbohydrate_restriction",
-        "Carbohydrate restriction request should be checked against glucose, medication, and performance context.",
-        inputs.diabetesMedication ? "high" : "moderate"
-      )
+      signal("contraindication_carbohydrate_restriction", "Carbohydrate restriction request should be checked against glucose, medication, and performance context.", inputs.diabetesMedication ? "high" : "moderate")
     );
   }
 
@@ -230,42 +209,33 @@ export function mapInputsToSignals(userCase) {
    */
   if (inputs.dietDurationWeeks >= 8) {
     signals.push(
-      signal(
-        "deficit_duration",
-        "Diet duration is long enough to consider accumulating diet fatigue.",
-        "moderate",
-        { weeks: inputs.dietDurationWeeks }
-      )
+      signal("deficit_duration", "Diet duration is long enough to consider accumulating diet fatigue.", "moderate", {
+        weeks: inputs.dietDurationWeeks
+      })
     );
   }
 
   if (inputs.hungerPressure === "high") {
     signals.push(
-      signal(
-        "hunger_pressure",
-        "High hunger pressure may reduce adherence and increase diet fatigue risk.",
-        "high"
-      )
+      signal("hunger_pressure", "High hunger pressure may reduce adherence and increase diet fatigue risk.", "high")
+    );
+  }
+
+  if (inputs.hungerPressure === "moderate") {
+    signals.push(
+      signal("hunger_pressure", "Moderate hunger pressure is present.", "moderate")
     );
   }
 
   if (inputs.dietDurationWeeks >= 8 && inputs.hungerPressure === "high") {
     signals.push(
-      signal(
-        "diet_fatigue_risk",
-        "Longer deficit duration with high hunger suggests elevated diet fatigue risk.",
-        "high"
-      )
+      signal("diet_fatigue_risk", "Longer deficit duration with high hunger suggests elevated diet fatigue risk.", "high")
     );
   }
 
   if (inputs.trainingPerformance === "declining") {
     signals.push(
-      signal(
-        "performance_decline_during_deficit",
-        "Training performance decline may indicate deficit or recovery strain.",
-        "moderate"
-      )
+      signal("performance_decline_during_deficit", "Training performance decline may indicate deficit or recovery strain.", "moderate")
     );
   }
 
@@ -274,26 +244,14 @@ export function mapInputsToSignals(userCase) {
    */
   if (inputs.stepCountConsistency === "low") {
     signals.push(
-      signal(
-        "step_count_consistency",
-        "Low step consistency may reduce expenditure reliability.",
-        "moderate"
-      )
+      signal("step_count_consistency", "Low step consistency may reduce expenditure reliability.", "moderate")
     );
   }
 
   if (inputs.sedentaryTime === "high") {
     signals.push(
-      signal(
-        "sedentary_time",
-        "High sedentary time may create a low-activity bottleneck.",
-        "moderate"
-      ),
-      signal(
-        "low_activity_bottleneck",
-        "Low daily activity may be limiting expenditure and health outcomes.",
-        "moderate"
-      )
+      signal("sedentary_time", "High sedentary time may create a low-activity bottleneck.", "moderate"),
+      signal("low_activity_bottleneck", "Low daily activity may be limiting expenditure and health outcomes.", "moderate")
     );
   }
 
