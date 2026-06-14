@@ -1,4 +1,3 @@
-
 export {
   mapInputsToSignals
 } from "./inputMapper.js";
@@ -15,3 +14,7 @@ export {
 export {
   selectStrategiesFromDiagnosis
 } from "./strategySelector.js";
+
+export {
+  buildRecommendationPackage
+} from "./recommendationBuilder.js";
