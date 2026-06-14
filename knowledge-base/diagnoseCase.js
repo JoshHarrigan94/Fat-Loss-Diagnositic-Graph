@@ -24,7 +24,8 @@ export function diagnoseCase(userCase) {
 
 const signals = [
   ...mapInputsToSignals(userCase),
-  ...extractLegacyKnowledgeSignals(inputs)
+  ...extractLegacyKnowledgeSignals(inputs),
+  ...extractLegacyRuleSignals(inputs)
 ];
 
   const activationResult = activateGraphFromSignals(graph, signals, {
