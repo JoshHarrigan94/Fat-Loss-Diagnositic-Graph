@@ -25,6 +25,24 @@ function priorityRank(priority) {
   return ranks[priority] || 0;
 }
 
+const strategyOrder = [
+  "strategy_medical_review",
+  "strategy_diet_break_or_maintenance",
+  "strategy_recovery_repair",
+  "strategy_monitoring_confidence",
+  "strategy_nutrition_quality",
+  "strategy_appetite_management",
+  "strategy_activity_increase",
+  "strategy_training_adjustment",
+  "strategy_habit_environment_design",
+  "strategy_calorie_adjustment"
+];
+
+function strategyOrderRank(strategyId) {
+  const index = strategyOrder.indexOf(strategyId);
+  return index === -1 ? 999 : index;
+}
+
 function dedupeStrategies(strategies) {
   const byId = new Map();
 
@@ -49,9 +67,16 @@ function dedupeStrategies(strategies) {
     }
   });
 
-  return [...byId.values()].sort(
-    (a, b) => priorityRank(b.priority) - priorityRank(a.priority)
-  );
+  return [...byId.values()].sort((a, b) => {
+    const priorityDifference =
+      priorityRank(b.priority) - priorityRank(a.priority);
+
+    if (priorityDifference !== 0) {
+      return priorityDifference;
+    }
+
+    return strategyOrderRank(a.id) - strategyOrderRank(b.id);
+  });
 }
 
 export function selectStrategiesFromDiagnosis({
