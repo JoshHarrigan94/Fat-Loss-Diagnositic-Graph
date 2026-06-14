@@ -1,0 +1,32 @@
+{
+  "id": "003_low_tracking_confidence",
+  "label": "Low tracking confidence hides intake error",
+  "family": "measurement_noise",
+  "difficulty": "basic",
+  "case": {
+    "inputs": {
+      "weightTrend": "stable",
+      "scaleWeightVariability": "moderate",
+      "calorieTrackingAccuracy": "low",
+      "missedLogs": true,
+      "weekendAdherenceGap": true,
+      "liquidCalories": true,
+      "sleepQuality": "normal"
+    }
+  },
+  "expected": {
+    "primaryIssue": "low_intake_confidence",
+    "recommendationMode": "recommendation_mode_monitor_only",
+    "primaryStrategy": "strategy_monitoring_confidence",
+    "shouldInclude": [
+      "calorie_tracking_accuracy",
+      "energy_intake_estimate",
+      "weekend_adherence_gap",
+      "liquid_calorie_exposure",
+      "strategy_monitoring_confidence"
+    ],
+    "shouldAvoid": [
+      "strategy_calorie_adjustment"
+    ]
+  }
+}
