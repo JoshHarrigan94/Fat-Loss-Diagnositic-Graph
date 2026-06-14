@@ -1,0 +1,34 @@
+{
+  "id": "010_older_adult_sarcopenia_risk",
+  "label": "Older adult where muscle and function matter more than speed",
+  "family": "population_constraints",
+  "difficulty": "advanced",
+  "case": {
+    "inputs": {
+      "population": "older_adult",
+      "weightTrend": "slow_loss",
+      "proteinAdequacy": "low",
+      "resistanceTrainingQuality": "low",
+      "injuryRisk": "moderate",
+      "sleepQuality": "normal",
+      "hungerPressure": "moderate"
+    }
+  },
+  "expected": {
+    "primaryIssue": "lean_mass_retention_priority",
+    "recommendationMode": "recommendation_mode_conservative",
+    "primaryStrategy": "strategy_training_adjustment",
+    "shouldInclude": [
+      "population_older_adult",
+      "priority_functional_independence",
+      "priority_lean_mass_retention",
+      "sarcopenia_risk",
+      "protein_adequacy",
+      "resistance_training_quality",
+      "strategy_training_adjustment"
+    ],
+    "shouldAvoid": [
+      "strategy_calorie_adjustment"
+    ]
+  }
+}
