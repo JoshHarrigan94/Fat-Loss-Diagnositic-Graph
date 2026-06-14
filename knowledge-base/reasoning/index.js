@@ -26,3 +26,7 @@ export {
 export {
   generateHypotheses
 } from "./hypothesisGenerator.js";
+
+export {
+  extractAnalyticsSignals
+} from "./signalExtractors/index.js";
