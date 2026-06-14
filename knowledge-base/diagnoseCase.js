@@ -1,4 +1,5 @@
 import { assembleKnowledgeGraph } from "./assembleGraph.js";
+
 import {
   mapInputsToSignals,
   activateGraphFromSignals,
@@ -10,19 +11,42 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function signalToActivatedNode(signal) {
-  return {
-    id: signal.nodeId,
-    reason: signal.reason,
-    confidence: signal.confidence,
-    metadata: signal.metadata || {}
-  };
-}
-
 export function diagnoseCase(userCase) {
   const graph = assembleKnowledgeGraph();
 
-  assembleKnowledgeGraph();
+  const signals = mapInputsToSignals(userCase);
+
+  const activationResult = activateGraphFromSignals(
+    graph,
+    signals,
+    {
+      expandOneHop: true,
+      includeIncomingContext: false
+    }
+  );
+
+  const activatedNodes = activationResult.activations.map(item => ({
+    id: item.id,
+    reason: item.reasons.join(" "),
+    confidence: item.confidence,
+    activationType: item.activationType,
+    activatedBy: item.activatedBy,
+    viaEdge: item.viaEdge || null
+  }));
+
+  const activatedNodeIds = activationResult.activatedNodeIds;
+
+  const reasoningRoutes = buildReasoningRoutes(
+    graph,
+    activationResult,
+    {
+      maxDepth: 3,
+      stopAtDecisionNodes: true,
+      maxRoutesPerStartNode: 8
+    }
+  );
+
+  const routeSummary = summariseReasoningRoutes(reasoningRoutes);
 
   const likelyIssues = [];
   const confidenceFlags = [];
@@ -125,34 +149,29 @@ export function diagnoseCase(userCase) {
     strategy => strategy !== primaryStrategy
   );
 
-  const missingActivatedNodes = activationResult.missingActivatedNodes;
-
   return {
     caseId: userCase.id || null,
+
+    signals,
+
     activatedNodes,
     activatedNodeIds,
-    missingActivatedNodes,
+    missingActivatedNodes: activationResult.missingActivatedNodes,
+
+    reasoningRoutes,
+    routeSummary,
+
     likelyIssues: unique(likelyIssues),
     confidenceFlags: unique(confidenceFlags),
     riskFlags: unique(riskFlags),
     contraindications: unique(contraindications),
+
     primaryStrategy,
     secondaryStrategies,
     delayedStrategies: [],
+
     recommendationMode
   };
 }
-
-const reasoningRoutes = buildReasoningRoutes(
-  graph,
-  activationResult,
-  {
-    maxDepth: 3,
-    stopAtDecisionNodes: true,
-    maxRoutesPerStartNode: 8
-  }
-);
-
-const routeSummary = summariseReasoningRoutes(reasoningRoutes);
 
 export default diagnoseCase;
