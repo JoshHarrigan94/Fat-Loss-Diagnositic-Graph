@@ -128,11 +128,32 @@ function renderScenario(result) {
       <p><strong>Risk:</strong> ${confidence.risk.label} (${confidence.risk.score})</p>
       <p><strong>Strategy:</strong> ${confidence.strategy.label} (${confidence.strategy.score})</p>
 
-      <h4>Recommendation</h4>
+            <h4>Recommendation</h4>
       <p><strong>${recommendation.primary.label}</strong></p>
       <p>${recommendation.primary.message}</p>
       <p><strong>Intensity:</strong> ${recommendation.intensity}</p>
       <p><strong>Next review:</strong> ${recommendation.nextReviewPoint}</p>
+
+      ${
+        recommendation.tacticalLevers?.length
+          ? `<h4>Tactical Levers</h4>
+             <ul>
+               ${recommendation.tacticalLevers
+                 .map(
+                   lever => `
+                     <li>
+                       <strong>${lever.label}</strong>
+                       <br>
+                       <span>${lever.description}</span>
+                       <br>
+                       <small>Strategy: ${lever.strategyLabel}</small>
+                     </li>
+                   `
+                 )
+                 .join("")}
+             </ul>`
+          : ""
+      }
     </section>
   `;
 }
