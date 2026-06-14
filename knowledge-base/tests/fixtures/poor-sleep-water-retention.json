@@ -1,0 +1,18 @@
+{
+  "id": "poor-sleep-water-retention",
+  "label": "Poor sleep with water retention",
+  "inputs": {
+    "sleepQuality": "low",
+    "stressLoad": "high",
+    "scaleSpike": true,
+    "adherenceConsistency": "moderate",
+    "trainingSoreness": "high"
+  },
+  "expectedRouteIncludes": [
+    "sleep_quality",
+    "stress_load",
+    "water_retention_from_stress",
+    "scale_weight_variability",
+    "strategy_recovery_repair"
+  ]
+}
