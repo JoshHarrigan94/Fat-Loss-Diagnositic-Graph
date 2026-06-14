@@ -7,7 +7,8 @@ import {
   summariseReasoningRoutes,
   selectStrategiesFromDiagnosis,
   buildRecommendationPackage,
-  buildConfidenceProfile
+  buildConfidenceProfile,
+  generateHypotheses
 } from "./reasoning/index.js";
 
 function unique(values) {
@@ -153,6 +154,17 @@ export function diagnoseCase(userCase) {
   const finalRiskFlags = unique(riskFlags);
   const finalContraindications = unique(contraindications);
 
+  const preStrategyDiagnosis = {
+    activatedNodeIds,
+    likelyIssues: finalLikelyIssues,
+    confidenceFlags: finalConfidenceFlags,
+    riskFlags: finalRiskFlags,
+    contraindications: finalContraindications
+  };
+
+  const hypotheses = generateHypotheses(preStrategyDiagnosis);
+  const primaryHypothesis = hypotheses[0] || null;
+
   const strategySelection = selectStrategiesFromDiagnosis({
     activatedNodeIds,
     likelyIssues: finalLikelyIssues,
@@ -215,6 +227,9 @@ export function diagnoseCase(userCase) {
 
     reasoningRoutes,
     routeSummary,
+
+    hypotheses,
+    primaryHypothesis,
 
     likelyIssues: finalLikelyIssues,
     confidenceFlags: finalConfidenceFlags,
