@@ -246,16 +246,17 @@ export function diagnoseRows(rows = [], options = {}) {
   const confidenceProfile = buildConfidenceProfile(partialDiagnosis);
 
   const recommendationPackage = buildRecommendationPackage({
-    recommendationMode,
-    likelyIssues,
-    confidenceFlags,
-    riskFlags,
-    contraindications,
-    primaryStrategy: strategySelection.primaryStrategy,
-    secondaryStrategies: strategySelection.secondaryStrategies,
-    delayedStrategies: strategySelection.delayedStrategies,
-    blockedStrategies: strategySelection.blockedStrategies
-  });
+  recommendationMode,
+  activatedNodeIds,
+  likelyIssues,
+  confidenceFlags,
+  riskFlags,
+  contraindications,
+  primaryStrategy: strategySelection.primaryStrategy,
+  secondaryStrategies: strategySelection.secondaryStrategies,
+  delayedStrategies: strategySelection.delayedStrategies,
+  blockedStrategies: strategySelection.blockedStrategies
+});
 
   return {
     source: "rows",
