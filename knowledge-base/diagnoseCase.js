@@ -5,8 +5,9 @@ import {
   activateGraphFromSignals,
   buildReasoningRoutes,
   summariseReasoningRoutes,
-  selectStrategiesFromDiagnosis
-} from "./reasoning/index.js";
+  selectStrategiesFromDiagnosis,
+  buildRecommendationPackage
+} from "./reasoning/index.js"; 
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
@@ -159,6 +160,18 @@ export function diagnoseCase(userCase) {
     recommendationMode = "recommendation_mode_conservative";
   }
 
+const recommendationPackage = buildRecommendationPackage({
+  recommendationMode,
+  likelyIssues: unique(likelyIssues),
+  confidenceFlags: unique(confidenceFlags),
+  riskFlags: unique(riskFlags),
+  contraindications: unique(contraindications),
+  primaryStrategy: strategySelection.primaryStrategy,
+  secondaryStrategies: strategySelection.secondaryStrategies,
+  delayedStrategies: strategySelection.delayedStrategies,
+  blockedStrategies: strategySelection.blockedStrategies
+});
+
   return {
     caseId: userCase.id || null,
 
@@ -181,7 +194,7 @@ export function diagnoseCase(userCase) {
     secondaryStrategies: strategySelection.secondaryStrategies,
     delayedStrategies: strategySelection.delayedStrategies,
     blockedStrategies: strategySelection.blockedStrategies,
-
+    recommendationPackage
     recommendationMode
   };
 }
