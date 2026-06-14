@@ -20,4 +20,10 @@
   "devDependencies": {
     "serve": "^14.2.1"
   }
+  
+  "scripts": {
+  "validate:kb": "node knowledge-base/validateKnowledgeBase.js",
+  "test:kb": "node knowledge-base/tests/testValidation.js",
+  "test:graph": "node knowledge-base/tests/testGraphAssembly.js"
+}
 }
