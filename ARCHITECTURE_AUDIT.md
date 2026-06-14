@@ -663,24 +663,34 @@ Retire duplicate ontology.
 
 ⸻
 
-Pass 4
-
-Graph Engine Extraction
+# Pass 4 – Graph Engine Extraction
 
 Status:
 
-Pending
+IN PROGRESS
 
-Goal:
+Purpose:
 
-Audit graph/
+Audit legacy graph engine for reusable reasoning capability.
 
-Identify:
+Focus:
 
-* reusable scoring
-* pathway traversal
-* activation logic
-* explanation logic
+- pathway discovery
+- pathway ranking
+- intervention mapping
+- graph traversal
+- activation propagation
+
+Non-focus:
+
+- rendering
+- visualisation
+- UI
+
+Desired outcome:
+
+Promote capability,
+not duplicate architecture.
 
 ⸻
 
