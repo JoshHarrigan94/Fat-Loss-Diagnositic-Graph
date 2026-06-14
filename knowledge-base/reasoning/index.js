@@ -22,3 +22,7 @@ export {
 export {
   buildConfidenceProfile
 } from "./confidenceEngine.js";
+
+export {
+  generateHypotheses
+} from "./hypothesisGenerator.js";
