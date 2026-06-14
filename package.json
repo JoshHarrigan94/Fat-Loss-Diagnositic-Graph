@@ -10,7 +10,8 @@
     "test:kb": "node knowledge-base/tests/testValidation.js",
     "test:graph": "node knowledge-base/tests/testGraphAssembly.js",
     "test:routes": "node knowledge-base/tests/testDiagnosticRoutes.js",
-    "test:scenarios": "node knowledge-base/tests/testScenarios.js"
+    "test:scenarios": "node knowledge-base/tests/testScenarios.js",
+    "inspect:scenario": "node knowledge-base/tests/inspectScenario.js"
   },
   "keywords": [
     "knowledge-graph",
