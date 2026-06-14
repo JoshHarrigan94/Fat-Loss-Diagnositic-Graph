@@ -15,7 +15,8 @@
     "report:scenarios": "node knowledge-base/tests/scenarioReport.js",
     "test:rows": "node knowledge-base/tests/testDiagnoseRows.js",
     "test:legacy": "node knowledge-base/tests/testLegacyKnowledgeAdapter.js",
-    "test:legacy-graph": "node knowledge-base/tests/testLegacyGraphAdapter.js"
+    "test:legacy-graph": "node knowledge-base/tests/testLegacyGraphAdapter.js",
+    "test:legacy-rules": "node knowledge-base/tests/testLegacyRulesAdapter.js"
   },
   "keywords": [
     "knowledge-graph",
