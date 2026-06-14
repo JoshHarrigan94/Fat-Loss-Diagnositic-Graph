@@ -1,6 +1,6 @@
 import { assembleKnowledgeGraph } from "../assembleGraph.js";
 import { validateKnowledgeBase } from "../validateKnowledgeBase.js";
-
+import { diagnoseCase } from "../diagnoseCase.js";
 const fixturePaths = [
   "./fixtures/stalled-weight-good-adherence.json",
   "./fixtures/poor-sleep-water-retention.json",
@@ -24,15 +24,23 @@ function nodeExists(graph, nodeId) {
 
 function testFixtureRoutes(graph, fixtures) {
   return fixtures.map(fixture => {
-    const missingNodes = fixture.expectedRouteIncludes.filter(
-      nodeId => !nodeExists(graph, nodeId)
+    const diagnosis = diagnoseCase(fixture);
+
+    const missingExpectedNodes = fixture.expectedRouteIncludes.filter(
+      nodeId => !diagnosis.activatedNodeIds.includes(nodeId)
     );
+
+    const missingGraphNodes = diagnosis.missingActivatedNodes;
 
     return {
       id: fixture.id,
       label: fixture.label,
-      passed: missingNodes.length === 0,
-      missingNodes
+      passed:
+        missingExpectedNodes.length === 0 &&
+        missingGraphNodes.length === 0,
+      missingExpectedNodes,
+      missingGraphNodes,
+      diagnosis
     };
   });
 }
@@ -41,21 +49,28 @@ function renderResults({ validation, graph, routeResults }) {
   const root = document.getElementById("test-output");
 
   const routeHtml = routeResults
-    .map(result => {
-      const status = result.passed ? "PASS" : "FAIL";
+  .map(result => {
+    const status = result.passed ? "PASS" : "FAIL";
 
-      return `
-        <li>
-          <strong>${status}</strong> — ${result.label}
-          ${
-            result.missingNodes.length
-              ? `<br><small>Missing: ${result.missingNodes.join(", ")}</small>`
-              : ""
-          }
-        </li>
-      `;
-    })
-    .join("");
+    return `
+      <li>
+        <strong>${status}</strong> — ${result.label}
+        ${
+          result.missingExpectedNodes.length
+            ? `<br><small>Missing expected route nodes: ${result.missingExpectedNodes.join(", ")}</small>`
+            : ""
+        }
+        ${
+          result.missingGraphNodes.length
+            ? `<br><small>Activated nodes missing from graph: ${result.missingGraphNodes.join(", ")}</small>`
+            : ""
+        }
+        <br><small>Primary strategy: ${result.diagnosis.primaryStrategy || "none"}</small>
+        <br><small>Recommendation mode: ${result.diagnosis.recommendationMode}</small>
+      </li>
+    `;
+  })
+  .join("");
 
   root.innerHTML = `
     <h1>Fat Loss Knowledge Graph Tests</h1>
