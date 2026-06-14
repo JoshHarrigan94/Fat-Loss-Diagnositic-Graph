@@ -1,0 +1,30 @@
+{
+  "id": "001_true_plateau_insufficient_deficit",
+  "label": "True plateau from insufficient deficit",
+  "family": "energy_deficit_failure",
+  "difficulty": "basic",
+  "case": {
+    "inputs": {
+      "weightTrend": "stable",
+      "scaleWeightVariability": "low",
+      "adherenceConsistency": "moderate",
+      "calorieTrackingAccuracy": "moderate",
+      "stepCountConsistency": "moderate",
+      "sleepQuality": "normal",
+      "stressLoad": "normal"
+    }
+  },
+  "expected": {
+    "primaryIssue": "insufficient_weekly_energy_deficit",
+    "recommendationMode": "recommendation_mode_standard",
+    "primaryStrategy": "strategy_calorie_adjustment",
+    "shouldInclude": [
+      "weekly_energy_deficit",
+      "strategy_calorie_adjustment"
+    ],
+    "shouldAvoid": [
+      "strategy_medical_review",
+      "recommendation_mode_referral_first"
+    ]
+  }
+}
