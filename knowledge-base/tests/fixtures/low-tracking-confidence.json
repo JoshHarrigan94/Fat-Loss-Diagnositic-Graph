@@ -1,0 +1,18 @@
+{
+  "id": "low-tracking-confidence",
+  "label": "Low tracking confidence",
+  "inputs": {
+    "weightTrend": "stable",
+    "calorieTrackingAccuracy": "low",
+    "missedLogs": true,
+    "weekendAdherenceGap": true,
+    "liquidCalories": true
+  },
+  "expectedRouteIncludes": [
+    "calorie_tracking_accuracy",
+    "weekend_adherence_gap",
+    "liquid_calorie_exposure",
+    "energy_intake_estimate",
+    "strategy_monitoring_confidence"
+  ]
+}
