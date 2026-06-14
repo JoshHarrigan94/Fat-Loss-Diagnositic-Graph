@@ -1,0 +1,35 @@
+{
+  "id": "009_type2_diabetes_hypoglycaemia_risk",
+  "label": "Type 2 diabetes with hypoglycaemia risk",
+  "family": "medical_risk",
+  "difficulty": "intermediate",
+  "case": {
+    "inputs": {
+      "population": "type_2_diabetes",
+      "diabetesMedication": true,
+      "hypoglycaemiaRisk": true,
+      "fastingRequested": true,
+      "carbohydrateRestrictionRequested": true,
+      "weightTrend": "stable"
+    }
+  },
+  "expected": {
+    "primaryIssue": "hypoglycaemia_risk",
+    "recommendationMode": "recommendation_mode_referral_first",
+    "primaryStrategy": "strategy_medical_review",
+    "shouldInclude": [
+      "population_type2_diabetes",
+      "priority_glucose_control",
+      "diabetes_medication_context",
+      "hypoglycaemia_risk",
+      "glucose_safety_risk",
+      "contraindication_unsupervised_fasting",
+      "contraindication_carbohydrate_restriction",
+      "strategy_medical_review"
+    ],
+    "shouldAvoid": [
+      "strategy_calorie_adjustment",
+      "strategy_activity_increase"
+    ]
+  }
+}
