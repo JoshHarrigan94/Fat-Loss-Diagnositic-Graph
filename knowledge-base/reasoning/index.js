@@ -42,3 +42,7 @@ export {
   getLegacyMechanismWeight,
   getLegacyInterventionLevers
 } from "./legacyGraphAdapter.js";
+
+export {
+  extractLegacyRuleSignals
+} from "./legacyRulesAdapter.js";
