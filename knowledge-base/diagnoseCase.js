@@ -7,7 +7,7 @@ import {
   summariseReasoningRoutes,
   selectStrategiesFromDiagnosis,
   buildRecommendationPackage
-} from "./reasoning/index.js"; 
+} from "./reasoning/index.js";
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
@@ -18,14 +18,10 @@ export function diagnoseCase(userCase) {
 
   const signals = mapInputsToSignals(userCase);
 
-  const activationResult = activateGraphFromSignals(
-    graph,
-    signals,
-    {
-      expandOneHop: true,
-      includeIncomingContext: false
-    }
-  );
+  const activationResult = activateGraphFromSignals(graph, signals, {
+    expandOneHop: true,
+    includeIncomingContext: false
+  });
 
   const activatedNodes = activationResult.activations.map(item => ({
     id: item.id,
@@ -38,15 +34,11 @@ export function diagnoseCase(userCase) {
 
   const activatedNodeIds = activationResult.activatedNodeIds;
 
-  const reasoningRoutes = buildReasoningRoutes(
-    graph,
-    activationResult,
-    {
-      maxDepth: 3,
-      stopAtDecisionNodes: true,
-      maxRoutesPerStartNode: 8
-    }
-  );
+  const reasoningRoutes = buildReasoningRoutes(graph, activationResult, {
+    maxDepth: 3,
+    stopAtDecisionNodes: true,
+    maxRoutesPerStartNode: 8
+  });
 
   const routeSummary = summariseReasoningRoutes(reasoningRoutes);
 
@@ -55,9 +47,6 @@ export function diagnoseCase(userCase) {
   const riskFlags = [];
   const contraindications = [];
 
-  /**
-   * Issue classification
-   */
   if (activatedNodeIds.includes("population_lean")) {
     likelyIssues.push("higher_diet_fatigue_and_lean_mass_loss_risk");
   }
@@ -133,44 +122,43 @@ export function diagnoseCase(userCase) {
     likelyIssues.push("performance_decline_during_deficit");
   }
 
-  /**
-   * Strategy selection
-   */
+  const finalLikelyIssues = unique(likelyIssues);
+  const finalConfidenceFlags = unique(confidenceFlags);
+  const finalRiskFlags = unique(riskFlags);
+  const finalContraindications = unique(contraindications);
+
   const strategySelection = selectStrategiesFromDiagnosis({
     activatedNodeIds,
-    likelyIssues,
-    confidenceFlags,
-    riskFlags,
-    contraindications
+    likelyIssues: finalLikelyIssues,
+    confidenceFlags: finalConfidenceFlags,
+    riskFlags: finalRiskFlags,
+    contraindications: finalContraindications
   });
 
-  /**
-   * Recommendation mode
-   */
   let recommendationMode = "recommendation_mode_standard";
 
-  if (riskFlags.length || contraindications.length) {
+  if (finalRiskFlags.length || finalContraindications.length) {
     recommendationMode = "recommendation_mode_referral_first";
-  } else if (confidenceFlags.length) {
+  } else if (finalConfidenceFlags.length) {
     recommendationMode = "recommendation_mode_monitor_only";
   } else if (
-    likelyIssues.includes("poor_sleep_recovery_constraint") ||
-    likelyIssues.includes("diet_fatigue_risk")
+    finalLikelyIssues.includes("poor_sleep_recovery_constraint") ||
+    finalLikelyIssues.includes("diet_fatigue_risk")
   ) {
     recommendationMode = "recommendation_mode_conservative";
   }
 
-const recommendationPackage = buildRecommendationPackage({
-  recommendationMode,
-  likelyIssues: unique(likelyIssues),
-  confidenceFlags: unique(confidenceFlags),
-  riskFlags: unique(riskFlags),
-  contraindications: unique(contraindications),
-  primaryStrategy: strategySelection.primaryStrategy,
-  secondaryStrategies: strategySelection.secondaryStrategies,
-  delayedStrategies: strategySelection.delayedStrategies,
-  blockedStrategies: strategySelection.blockedStrategies
-});
+  const recommendationPackage = buildRecommendationPackage({
+    recommendationMode,
+    likelyIssues: finalLikelyIssues,
+    confidenceFlags: finalConfidenceFlags,
+    riskFlags: finalRiskFlags,
+    contraindications: finalContraindications,
+    primaryStrategy: strategySelection.primaryStrategy,
+    secondaryStrategies: strategySelection.secondaryStrategies,
+    delayedStrategies: strategySelection.delayedStrategies,
+    blockedStrategies: strategySelection.blockedStrategies
+  });
 
   return {
     caseId: userCase.id || null,
@@ -184,18 +172,19 @@ const recommendationPackage = buildRecommendationPackage({
     reasoningRoutes,
     routeSummary,
 
-    likelyIssues: unique(likelyIssues),
-    confidenceFlags: unique(confidenceFlags),
-    riskFlags: unique(riskFlags),
-    contraindications: unique(contraindications),
+    likelyIssues: finalLikelyIssues,
+    confidenceFlags: finalConfidenceFlags,
+    riskFlags: finalRiskFlags,
+    contraindications: finalContraindications,
 
     strategyCandidates: strategySelection.strategyCandidates,
     primaryStrategy: strategySelection.primaryStrategy,
     secondaryStrategies: strategySelection.secondaryStrategies,
     delayedStrategies: strategySelection.delayedStrategies,
     blockedStrategies: strategySelection.blockedStrategies,
+
+    recommendationMode,
     recommendationPackage
-    recommendationMode
   };
 }
 
