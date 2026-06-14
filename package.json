@@ -5,7 +5,11 @@
   "description": "Explainable fat loss diagnostic engine using statistics, rules, knowledge graphs and lightweight prediction.",
   "main": "app/index.html",
   "scripts": {
-    "start": "npx serve ."
+    "start": "npx serve .",
+    "validate:kb": "node knowledge-base/tests/testValidation.js",
+    "test:kb": "node knowledge-base/tests/testValidation.js",
+    "test:graph": "node knowledge-base/tests/testGraphAssembly.js",
+    "test:routes": "node knowledge-base/tests/testDiagnosticRoutes.js"
   },
   "keywords": [
     "knowledge-graph",
@@ -20,11 +24,4 @@
   "devDependencies": {
     "serve": "^14.2.1"
   }
-  
-  "scripts": {
-  "validate:kb": "node knowledge-base/validateKnowledgeBase.js",
-  "test:kb": "node knowledge-base/tests/testValidation.js",
-  "test:graph": "node knowledge-base/tests/testGraphAssembly.js"
-  "test:routes": "node knowledge-base/tests/testDiagnosticRoutes.js"
-}
 }
