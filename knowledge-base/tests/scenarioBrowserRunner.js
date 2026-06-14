@@ -98,7 +98,7 @@ function evaluateScenario(scenario) {
 function renderScenario(result) {
   const { scenario, diagnosis, passed, failures } = result;
   const recommendation = diagnosis.recommendationPackage;
-
+  const confidence = diagnosis.confidenceProfile;
   return `
     <section class="card ${passed ? "pass" : "fail"}">
       <h3>${passed ? "PASS" : "FAIL"} — ${scenario.id}</h3>
@@ -120,6 +120,13 @@ function renderScenario(result) {
       <p><strong>Recommendation mode:</strong> ${diagnosis.recommendationMode}</p>
       <p><strong>Likely issues:</strong> ${diagnosis.likelyIssues.join(", ") || "None"}</p>
       <p><strong>Risk flags:</strong> ${diagnosis.riskFlags.join(", ") || "None"}</p>
+
+            <h4>Confidence</h4>
+      <p><strong>Overall:</strong> ${confidence.overall.label} (${confidence.overall.score})</p>
+      <p><strong>Measurement:</strong> ${confidence.measurement.label} (${confidence.measurement.score})</p>
+      <p><strong>Intake:</strong> ${confidence.intake.label} (${confidence.intake.score})</p>
+      <p><strong>Risk:</strong> ${confidence.risk.label} (${confidence.risk.score})</p>
+      <p><strong>Strategy:</strong> ${confidence.strategy.label} (${confidence.strategy.score})</p>
 
       <h4>Recommendation</h4>
       <p><strong>${recommendation.primary.label}</strong></p>
