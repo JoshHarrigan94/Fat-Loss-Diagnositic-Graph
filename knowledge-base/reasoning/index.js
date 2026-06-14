@@ -30,3 +30,7 @@ export {
 export {
   extractAnalyticsSignals
 } from "./signalExtractors/index.js";
+
+export {
+  extractLegacyKnowledgeSignals
+} from "./legacyKnowledgeAdapter.js";
