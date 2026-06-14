@@ -34,3 +34,11 @@ export {
 export {
   extractLegacyKnowledgeSignals
 } from "./legacyKnowledgeAdapter.js";
+
+export {
+  legacyDiagnosisMechanismWeights,
+  legacySignalNodeMap,
+  legacyInterventionLevers,
+  getLegacyMechanismWeight,
+  getLegacyInterventionLevers
+} from "./legacyGraphAdapter.js";
