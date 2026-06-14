@@ -1,0 +1,32 @@
+{
+  "id": "006_diet_fatigue_cut_too_long",
+  "label": "Diet fatigue after long aggressive cut",
+  "family": "diet_fatigue",
+  "difficulty": "intermediate",
+  "case": {
+    "inputs": {
+      "dietDurationWeeks": 14,
+      "hungerPressure": "high",
+      "sleepQuality": "low",
+      "trainingPerformance": "declining",
+      "adherenceConsistency": "declining",
+      "weightTrend": "stable"
+    }
+  },
+  "expected": {
+    "primaryIssue": "diet_fatigue_risk",
+    "recommendationMode": "recommendation_mode_monitor_only",
+    "primaryStrategy": "strategy_diet_break_or_maintenance",
+    "shouldInclude": [
+      "deficit_duration",
+      "hunger_pressure",
+      "diet_fatigue_risk",
+      "performance_decline_during_deficit",
+      "strategy_diet_break_or_maintenance"
+    ],
+    "shouldAvoid": [
+      "strategy_calorie_adjustment",
+      "strategy_activity_increase"
+    ]
+  }
+}
