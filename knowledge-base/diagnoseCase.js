@@ -4,7 +4,8 @@ import {
   mapInputsToSignals,
   activateGraphFromSignals,
   buildReasoningRoutes,
-  summariseReasoningRoutes
+  summariseReasoningRoutes,
+  selectStrategiesFromDiagnosis
 } from "./reasoning/index.js";
 
 function unique(values) {
@@ -52,8 +53,10 @@ export function diagnoseCase(userCase) {
   const confidenceFlags = [];
   const riskFlags = [];
   const contraindications = [];
-  const strategies = [];
 
+  /**
+   * Issue classification
+   */
   if (activatedNodeIds.includes("population_lean")) {
     likelyIssues.push("higher_diet_fatigue_and_lean_mass_loss_risk");
   }
@@ -63,13 +66,11 @@ export function diagnoseCase(userCase) {
     activatedNodeIds.includes("measurement_noise_interpretation")
   ) {
     confidenceFlags.push("weight_trend_requires_interpretation");
-    strategies.push("strategy_monitoring_confidence");
   }
 
   if (activatedNodeIds.includes("calorie_tracking_accuracy")) {
     likelyIssues.push("low_intake_confidence");
     confidenceFlags.push("calorie_tracking_confidence_low");
-    strategies.push("strategy_monitoring_confidence");
   }
 
   if (activatedNodeIds.includes("weekend_adherence_gap")) {
@@ -82,7 +83,6 @@ export function diagnoseCase(userCase) {
 
   if (activatedNodeIds.includes("sleep_quality")) {
     likelyIssues.push("poor_sleep_recovery_constraint");
-    strategies.push("strategy_recovery_repair");
   }
 
   if (activatedNodeIds.includes("stress_load")) {
@@ -94,12 +94,18 @@ export function diagnoseCase(userCase) {
     activatedNodeIds.includes("training_inflammation_shift")
   ) {
     confidenceFlags.push("scale_noise_possible");
-    strategies.push("strategy_monitoring_confidence");
   }
 
   if (activatedNodeIds.includes("hypoglycaemia_risk")) {
     riskFlags.push("hypoglycaemia_risk");
-    strategies.push("strategy_medical_review");
+  }
+
+  if (activatedNodeIds.includes("glucose_safety_risk")) {
+    riskFlags.push("glucose_safety_risk");
+  }
+
+  if (activatedNodeIds.includes("medical_risk_level")) {
+    riskFlags.push("medical_risk_level");
   }
 
   if (activatedNodeIds.includes("contraindication_unsupervised_fasting")) {
@@ -110,15 +116,36 @@ export function diagnoseCase(userCase) {
     contraindications.push("contraindication_carbohydrate_restriction");
   }
 
+  if (activatedNodeIds.includes("contraindication_aggressive_deficit")) {
+    contraindications.push("contraindication_aggressive_deficit");
+  }
+
+  if (activatedNodeIds.includes("contraindication_strict_tracking")) {
+    contraindications.push("contraindication_strict_tracking");
+  }
+
   if (activatedNodeIds.includes("diet_fatigue_risk")) {
     likelyIssues.push("diet_fatigue_risk");
-    strategies.push("strategy_diet_break_or_maintenance");
   }
 
   if (activatedNodeIds.includes("performance_decline_during_deficit")) {
     likelyIssues.push("performance_decline_during_deficit");
   }
 
+  /**
+   * Strategy selection
+   */
+  const strategySelection = selectStrategiesFromDiagnosis({
+    activatedNodeIds,
+    likelyIssues,
+    confidenceFlags,
+    riskFlags,
+    contraindications
+  });
+
+  /**
+   * Recommendation mode
+   */
   let recommendationMode = "recommendation_mode_standard";
 
   if (riskFlags.length || contraindications.length) {
@@ -131,23 +158,6 @@ export function diagnoseCase(userCase) {
   ) {
     recommendationMode = "recommendation_mode_conservative";
   }
-
-  const uniqueStrategies = unique(strategies);
-
-  const primaryStrategy =
-    uniqueStrategies.includes("strategy_medical_review")
-      ? "strategy_medical_review"
-      : uniqueStrategies.includes("strategy_diet_break_or_maintenance")
-        ? "strategy_diet_break_or_maintenance"
-        : uniqueStrategies.includes("strategy_recovery_repair")
-          ? "strategy_recovery_repair"
-          : uniqueStrategies.includes("strategy_monitoring_confidence")
-            ? "strategy_monitoring_confidence"
-            : null;
-
-  const secondaryStrategies = uniqueStrategies.filter(
-    strategy => strategy !== primaryStrategy
-  );
 
   return {
     caseId: userCase.id || null,
@@ -166,9 +176,11 @@ export function diagnoseCase(userCase) {
     riskFlags: unique(riskFlags),
     contraindications: unique(contraindications),
 
-    primaryStrategy,
-    secondaryStrategies,
-    delayedStrategies: [],
+    strategyCandidates: strategySelection.strategyCandidates,
+    primaryStrategy: strategySelection.primaryStrategy,
+    secondaryStrategies: strategySelection.secondaryStrategies,
+    delayedStrategies: strategySelection.delayedStrategies,
+    blockedStrategies: strategySelection.blockedStrategies,
 
     recommendationMode
   };
