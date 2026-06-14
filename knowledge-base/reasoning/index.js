@@ -18,3 +18,7 @@ export {
 export {
   buildRecommendationPackage
 } from "./recommendationBuilder.js";
+
+export {
+  buildConfidenceProfile
+} from "./confidenceEngine.js";
