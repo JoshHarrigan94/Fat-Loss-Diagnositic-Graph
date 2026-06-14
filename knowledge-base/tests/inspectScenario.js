@@ -86,3 +86,7 @@ console.log(diagnosis.activatedNodeIds);
 console.log("\nRecommendation Package");
 console.log("----------------------");
 console.log(JSON.stringify(diagnosis.recommendationPackage, null, 2));
+
+console.log("\nConfidence Profile");
+console.log("------------------");
+console.log(JSON.stringify(diagnosis.confidenceProfile, null, 2));
