@@ -2,6 +2,7 @@ import { assembleKnowledgeGraph } from "./assembleGraph.js";
 
 import {
   mapInputsToSignals,
+  extractLegacyKnowledgeSignals,
   activateGraphFromSignals,
   buildReasoningRoutes,
   summariseReasoningRoutes,
@@ -18,7 +19,12 @@ function unique(values) {
 export function diagnoseCase(userCase) {
   const graph = assembleKnowledgeGraph();
 
-  const signals = mapInputsToSignals(userCase);
+  const inputs = userCase.inputs || userCase;
+
+const signals = [
+  ...mapInputsToSignals(userCase),
+  ...extractLegacyKnowledgeSignals(inputs)
+];
 
   const activationResult = activateGraphFromSignals(graph, signals, {
     expandOneHop: true,
