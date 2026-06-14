@@ -90,3 +90,11 @@ console.log(JSON.stringify(diagnosis.recommendationPackage, null, 2));
 console.log("\nConfidence Profile");
 console.log("------------------");
 console.log(JSON.stringify(diagnosis.confidenceProfile, null, 2));
+
+console.log("\nHypotheses");
+console.log("----------");
+console.log(JSON.stringify(diagnosis.hypotheses, null, 2));
+
+console.log("\nPrimary Hypothesis");
+console.log("------------------");
+console.log(JSON.stringify(diagnosis.primaryHypothesis, null, 2));
