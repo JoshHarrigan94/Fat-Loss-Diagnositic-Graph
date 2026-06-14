@@ -11,3 +11,7 @@ export {
   validateKnowledgeBase,
   logKnowledgeBaseValidation
 } from "./validateKnowledgeBase.js";
+
+export {
+  diagnoseRows
+} from "./diagnoseRows.js";
