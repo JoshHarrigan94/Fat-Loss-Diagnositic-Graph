@@ -47,10 +47,34 @@ export function diagnoseCase(userCase) {
   const riskFlags = [];
   const contraindications = [];
 
+  /**
+   * True plateau / insufficient deficit
+   */
+  if (
+    activatedNodeIds.includes("weekly_energy_deficit") &&
+    activatedNodeIds.includes("strategy_calorie_adjustment")
+  ) {
+    likelyIssues.push("insufficient_weekly_energy_deficit");
+  }
+
+  /**
+   * Population and body composition
+   */
   if (activatedNodeIds.includes("population_lean")) {
     likelyIssues.push("higher_diet_fatigue_and_lean_mass_loss_risk");
   }
 
+  if (
+    activatedNodeIds.includes("population_older_adult") ||
+    activatedNodeIds.includes("sarcopenia_risk") ||
+    activatedNodeIds.includes("priority_functional_independence")
+  ) {
+    likelyIssues.push("lean_mass_retention_priority");
+  }
+
+  /**
+   * Measurement and confidence
+   */
   if (
     activatedNodeIds.includes("weight_trend_confidence") ||
     activatedNodeIds.includes("measurement_noise_interpretation")
@@ -71,6 +95,9 @@ export function diagnoseCase(userCase) {
     likelyIssues.push("hidden_liquid_calorie_intake");
   }
 
+  /**
+   * Recovery, sleep, stress
+   */
   if (activatedNodeIds.includes("sleep_quality")) {
     likelyIssues.push("poor_sleep_recovery_constraint");
   }
@@ -83,10 +110,15 @@ export function diagnoseCase(userCase) {
     activatedNodeIds.includes("water_retention_from_stress") ||
     activatedNodeIds.includes("training_inflammation_shift")
   ) {
+    likelyIssues.push("scale_noise_possible");
     confidenceFlags.push("scale_noise_possible");
   }
 
+  /**
+   * Glucose / medical risk
+   */
   if (activatedNodeIds.includes("hypoglycaemia_risk")) {
+    likelyIssues.push("hypoglycaemia_risk");
     riskFlags.push("hypoglycaemia_risk");
   }
 
@@ -98,6 +130,9 @@ export function diagnoseCase(userCase) {
     riskFlags.push("medical_risk_level");
   }
 
+  /**
+   * Contraindications
+   */
   if (activatedNodeIds.includes("contraindication_unsupervised_fasting")) {
     contraindications.push("contraindication_unsupervised_fasting");
   }
@@ -114,12 +149,26 @@ export function diagnoseCase(userCase) {
     contraindications.push("contraindication_strict_tracking");
   }
 
+  /**
+   * Diet fatigue and performance
+   */
   if (activatedNodeIds.includes("diet_fatigue_risk")) {
     likelyIssues.push("diet_fatigue_risk");
   }
 
   if (activatedNodeIds.includes("performance_decline_during_deficit")) {
     likelyIssues.push("performance_decline_during_deficit");
+  }
+
+  /**
+   * Activity / NEAT
+   */
+  if (
+    activatedNodeIds.includes("low_activity_bottleneck") ||
+    activatedNodeIds.includes("sedentary_time") ||
+    activatedNodeIds.includes("step_count_consistency")
+  ) {
+    likelyIssues.push("low_activity_bottleneck");
   }
 
   const finalLikelyIssues = unique(likelyIssues);
@@ -135,15 +184,24 @@ export function diagnoseCase(userCase) {
     contraindications: finalContraindications
   });
 
+  /**
+   * Recommendation mode
+   */
   let recommendationMode = "recommendation_mode_standard";
 
   if (finalRiskFlags.length || finalContraindications.length) {
     recommendationMode = "recommendation_mode_referral_first";
+  } else if (
+    finalLikelyIssues.includes("insufficient_weekly_energy_deficit") &&
+    finalConfidenceFlags.length === 0
+  ) {
+    recommendationMode = "recommendation_mode_standard";
   } else if (finalConfidenceFlags.length) {
     recommendationMode = "recommendation_mode_monitor_only";
   } else if (
     finalLikelyIssues.includes("poor_sleep_recovery_constraint") ||
-    finalLikelyIssues.includes("diet_fatigue_risk")
+    finalLikelyIssues.includes("diet_fatigue_risk") ||
+    finalLikelyIssues.includes("lean_mass_retention_priority")
   ) {
     recommendationMode = "recommendation_mode_conservative";
   }
