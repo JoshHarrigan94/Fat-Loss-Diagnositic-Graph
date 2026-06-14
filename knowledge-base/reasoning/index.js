@@ -6,3 +6,8 @@ export {
 export {
   activateGraphFromSignals
 } from "./activationEngine.js";
+
+export {
+  buildReasoningRoutes,
+  summariseReasoningRoutes
+} from "./routeBuilder.js";
