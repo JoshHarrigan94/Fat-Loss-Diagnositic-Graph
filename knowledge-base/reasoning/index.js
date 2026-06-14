@@ -11,3 +11,7 @@ export {
   buildReasoningRoutes,
   summariseReasoningRoutes
 } from "./routeBuilder.js";
+
+export {
+  selectStrategiesFromDiagnosis
+} from "./strategySelector.js";
