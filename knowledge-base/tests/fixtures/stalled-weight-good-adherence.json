@@ -1,0 +1,18 @@
+{
+  "id": "stalled-weight-good-adherence",
+  "label": "Stalled weight with good adherence",
+  "inputs": {
+    "weightTrend": "stable",
+    "adherenceConsistency": "high",
+    "calorieTrackingAccuracy": "high",
+    "stepCountConsistency": "high",
+    "sleepQuality": "normal",
+    "scaleWeightVariability": "high"
+  },
+  "expectedRouteIncludes": [
+    "measurement_noise_interpretation",
+    "weight_trend_confidence",
+    "measurement_decision_threshold",
+    "strategy_monitoring_confidence"
+  ]
+}
