@@ -1,5 +1,8 @@
 import { assembleKnowledgeGraph } from "./assembleGraph.js";
-import { mapInputsToSignals } from "./reasoning/index.js";
+import {
+  mapInputsToSignals,
+  activateGraphFromSignals
+} from "./reasoning/index.js";
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
@@ -17,9 +20,7 @@ function signalToActivatedNode(signal) {
 export function diagnoseCase(userCase) {
   const graph = assembleKnowledgeGraph();
 
-  const signals = mapInputsToSignals(userCase);
-  const activatedNodes = signals.map(signalToActivatedNode);
-  const activatedNodeIds = unique(activatedNodes.map(node => node.id));
+  assembleKnowledgeGraph();
 
   const likelyIssues = [];
   const confidenceFlags = [];
@@ -122,9 +123,7 @@ export function diagnoseCase(userCase) {
     strategy => strategy !== primaryStrategy
   );
 
-  const missingActivatedNodes = activatedNodeIds.filter(
-    nodeId => !graph.nodes.some(node => node.id === nodeId)
-  );
+  const missingActivatedNodes = activationResult.missingActivatedNodes;
 
   return {
     caseId: userCase.id || null,
