@@ -29,13 +29,13 @@ const strategyOrder = [
   "strategy_medical_review",
   "strategy_diet_break_or_maintenance",
   "strategy_recovery_repair",
+  "strategy_training_adjustment",
   "strategy_monitoring_confidence",
+  "strategy_calorie_adjustment",
   "strategy_nutrition_quality",
   "strategy_appetite_management",
   "strategy_activity_increase",
-  "strategy_training_adjustment",
-  "strategy_habit_environment_design",
-  "strategy_calorie_adjustment"
+  "strategy_habit_environment_design"
 ];
 
 function strategyOrderRank(strategyId) {
@@ -147,12 +147,28 @@ export function selectStrategiesFromDiagnosis({
   }
 
   /**
-   * 3. Confidence and monitoring
+   * 3. True insufficient deficit
+   */
+  if (
+    likelyIssues.includes("insufficient_weekly_energy_deficit") &&
+    confidenceFlags.length === 0 &&
+    riskFlags.length === 0 &&
+    contraindications.length === 0
+  ) {
+    addStrategy(
+      strategies,
+      "strategy_calorie_adjustment",
+      "A true insufficient deficit is likely and confidence is adequate, so calorie adjustment may be appropriate.",
+      "high"
+    );
+  }
+
+  /**
+   * 4. Confidence and monitoring
    */
   if (
     confidenceFlags.length > 0 ||
     hasAny(activatedNodeIds, [
-      "weight_trend_confidence",
       "measurement_noise_interpretation",
       "measurement_decision_threshold",
       "calorie_tracking_accuracy",
@@ -169,7 +185,7 @@ export function selectStrategiesFromDiagnosis({
   }
 
   /**
-   * 4. Recovery and sleep
+   * 5. Recovery and sleep
    */
   if (
     hasAny(activatedNodeIds, [
@@ -190,7 +206,7 @@ export function selectStrategiesFromDiagnosis({
   }
 
   /**
-   * 5. Diet fatigue and maintenance
+   * 6. Diet fatigue and maintenance
    */
   if (
     hasAny(activatedNodeIds, [
@@ -210,7 +226,32 @@ export function selectStrategiesFromDiagnosis({
   }
 
   /**
-   * 6. Nutrition quality and appetite
+   * 7. Older adult / lean mass / training protection
+   */
+  if (
+    likelyIssues.includes("lean_mass_retention_priority") ||
+    hasAny(activatedNodeIds, [
+      "population_older_adult",
+      "sarcopenia_risk",
+      "priority_functional_independence",
+      "priority_lean_mass_retention",
+      "resistance_training_quality",
+      "training_goal_alignment",
+      "injury_risk_from_training",
+      "training_volume_tolerance",
+      "priority_performance"
+    ])
+  ) {
+    addStrategy(
+      strategies,
+      "strategy_training_adjustment",
+      "Training should be adjusted to protect muscle, function, performance, recovery, or safety.",
+      "high"
+    );
+  }
+
+  /**
+   * 8. Nutrition quality and appetite
    */
   if (
     hasAny(activatedNodeIds, [
@@ -249,7 +290,7 @@ export function selectStrategiesFromDiagnosis({
   }
 
   /**
-   * 7. Activity
+   * 9. Activity
    */
   if (
     hasAny(activatedNodeIds, [
@@ -268,28 +309,7 @@ export function selectStrategiesFromDiagnosis({
   }
 
   /**
-   * 8. Training
-   */
-  if (
-    hasAny(activatedNodeIds, [
-      "resistance_training_quality",
-      "training_goal_alignment",
-      "injury_risk_from_training",
-      "training_volume_tolerance",
-      "priority_lean_mass_retention",
-      "priority_performance"
-    ])
-  ) {
-    addStrategy(
-      strategies,
-      "strategy_training_adjustment",
-      "Training may need adjustment to protect muscle, performance, recovery, or safety.",
-      "moderate"
-    );
-  }
-
-  /**
-   * 9. Habit and environment
+   * 10. Habit and environment
    */
   if (
     hasAny(activatedNodeIds, [
@@ -319,12 +339,11 @@ export function selectStrategiesFromDiagnosis({
     .map(strategy => strategy.id);
 
   /**
-   * Delay escalation when confidence or recovery issues are present.
+   * Delay escalation when confidence, recovery, or safety issues are present.
    */
   if (
     confidenceFlags.length > 0 ||
     hasAny(activatedNodeIds, [
-      "weight_trend_confidence",
       "measurement_noise_interpretation",
       "calorie_tracking_accuracy"
     ])
@@ -348,6 +367,23 @@ export function selectStrategiesFromDiagnosis({
       id: "strategy_activity_increase",
       reason:
         "Activity increases should be delayed or conservative until recovery constraints are addressed."
+    });
+  }
+
+  if (
+    riskFlags.length > 0 ||
+    contraindications.length > 0
+  ) {
+    delayedStrategies.push({
+      id: "strategy_calorie_adjustment",
+      reason:
+        "Calorie adjustment should be delayed until safety risks or contraindications are resolved."
+    });
+
+    delayedStrategies.push({
+      id: "strategy_activity_increase",
+      reason:
+        "Activity increases should be delayed or medically modified until safety risks are resolved."
     });
   }
 
