@@ -1,0 +1,33 @@
+{
+  "id": "002_false_plateau_water_retention",
+  "label": "False plateau from water retention",
+  "family": "water_retention",
+  "difficulty": "basic",
+  "case": {
+    "inputs": {
+      "weightTrend": "stable",
+      "scaleWeightVariability": "high",
+      "calorieTrackingAccuracy": "high",
+      "adherenceConsistency": "high",
+      "stepCountConsistency": "high",
+      "sleepQuality": "low",
+      "stressLoad": "high",
+      "trainingSoreness": "high",
+      "scaleSpike": true
+    }
+  },
+  "expected": {
+    "primaryIssue": "scale_noise_possible",
+    "recommendationMode": "recommendation_mode_monitor_only",
+    "primaryStrategy": "strategy_monitoring_confidence",
+    "shouldInclude": [
+      "water_retention_from_stress",
+      "scale_weight_variability",
+      "measurement_noise_interpretation",
+      "strategy_monitoring_confidence"
+    ],
+    "shouldAvoid": [
+      "strategy_calorie_adjustment"
+    ]
+  }
+}
