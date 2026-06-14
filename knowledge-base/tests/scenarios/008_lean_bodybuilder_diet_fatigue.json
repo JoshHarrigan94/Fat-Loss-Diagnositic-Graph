@@ -1,0 +1,33 @@
+{
+  "id": "008_lean_bodybuilder_diet_fatigue",
+  "label": "Lean bodybuilder with diet fatigue",
+  "family": "bodybuilder_protection",
+  "difficulty": "intermediate",
+  "case": {
+    "inputs": {
+      "population": "bodybuilder",
+      "bodyFatContext": "lean",
+      "dietDurationWeeks": 12,
+      "hungerPressure": "high",
+      "trainingPerformance": "declining",
+      "sleepQuality": "low",
+      "weightTrend": "stable"
+    }
+  },
+  "expected": {
+    "primaryIssue": "diet_fatigue_risk",
+    "recommendationMode": "recommendation_mode_monitor_only",
+    "primaryStrategy": "strategy_diet_break_or_maintenance",
+    "shouldInclude": [
+      "population_bodybuilder",
+      "population_lean",
+      "priority_lean_mass_retention",
+      "diet_fatigue_risk",
+      "performance_decline_during_deficit",
+      "strategy_diet_break_or_maintenance"
+    ],
+    "shouldAvoid": [
+      "strategy_calorie_adjustment"
+    ]
+  }
+}
