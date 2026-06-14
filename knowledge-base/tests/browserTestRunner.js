@@ -24,12 +24,24 @@ async function loadFixtures() {
   );
 }
 
+function getDiagnosisCoverage(diagnosis) {
+  return [
+    ...diagnosis.activatedNodeIds,
+    diagnosis.primaryStrategy,
+    ...diagnosis.secondaryStrategies,
+    ...diagnosis.delayedStrategies.map(item => item.id),
+    ...diagnosis.blockedStrategies.map(item => item.id),
+    diagnosis.recommendationMode
+  ].filter(Boolean);
+}
+
 function testFixtureRoutes(fixtures) {
   return fixtures.map(fixture => {
     const diagnosis = diagnoseCase(fixture);
+    const coverage = getDiagnosisCoverage(diagnosis);
 
     const missingExpectedNodes = fixture.expectedRouteIncludes.filter(
-      nodeId => !diagnosis.activatedNodeIds.includes(nodeId)
+      nodeId => !coverage.includes(nodeId)
     );
 
     const missingGraphNodes = diagnosis.missingActivatedNodes;
@@ -47,13 +59,74 @@ function testFixtureRoutes(fixtures) {
   });
 }
 
+function renderList(items, fallback = "None") {
+  if (!items || items.length === 0) {
+    return fallback;
+  }
+
+  return items.join(", ");
+}
+
+function renderRecommendationSection(recommendation) {
+  return `
+    <div style="margin-top:0.75rem; padding:0.75rem; background:#f8f8f8;">
+      <p><strong>Primary strategy:</strong> ${recommendation.primary.label}</p>
+      <p><strong>Mode:</strong> ${recommendation.modeLabel}</p>
+      <p><strong>Intensity:</strong> ${recommendation.intensity}</p>
+      <p><strong>Message:</strong> ${recommendation.primary.message}</p>
+      <p><strong>Next review:</strong> ${recommendation.nextReviewPoint}</p>
+
+      ${
+        recommendation.secondary.length
+          ? `<p><strong>Secondary:</strong> ${recommendation.secondary
+              .map(item => item.label)
+              .join(", ")}</p>`
+          : ""
+      }
+
+      ${
+        recommendation.delayed.length
+          ? `<p><strong>Delayed:</strong><br>${recommendation.delayed
+              .map(item => `${item.label} — ${item.reason}`)
+              .join("<br>")}</p>`
+          : ""
+      }
+
+      ${
+        recommendation.blocked.length
+          ? `<p><strong>Blocked:</strong><br>${recommendation.blocked
+              .map(item => `${item.label} — ${item.reason}`)
+              .join("<br>")}</p>`
+          : ""
+      }
+
+      ${
+        recommendation.safetyCaveats.length
+          ? `<p><strong>Safety caveats:</strong><br>${recommendation.safetyCaveats.join(
+              "<br>"
+            )}</p>`
+          : ""
+      }
+
+      ${
+        recommendation.monitoringGuidance.length
+          ? `<p><strong>Monitoring guidance:</strong><br>${recommendation.monitoringGuidance.join(
+              "<br>"
+            )}</p>`
+          : ""
+      }
+    </div>
+  `;
+}
+
 function renderResults({ validation, graph, routeResults }) {
   const root = document.getElementById("test-output");
 
   const routeHtml = routeResults
     .map(result => {
       const status = result.passed ? "PASS" : "FAIL";
-      const recommendation = result.diagnosis.recommendationPackage;
+      const diagnosis = result.diagnosis;
+      const recommendation = diagnosis.recommendationPackage;
 
       return `
         <section style="border:1px solid #ddd; padding:1rem; margin-bottom:1rem;">
@@ -61,51 +134,26 @@ function renderResults({ validation, graph, routeResults }) {
 
           ${
             result.missingExpectedNodes.length
-              ? `<p><strong>Missing expected route nodes:</strong> ${result.missingExpectedNodes.join(", ")}</p>`
+              ? `<p><strong>Missing expected outputs:</strong> ${result.missingExpectedNodes.join(
+                  ", "
+                )}</p>`
               : ""
           }
 
           ${
             result.missingGraphNodes.length
-              ? `<p><strong>Activated nodes missing from graph:</strong> ${result.missingGraphNodes.join(", ")}</p>`
+              ? `<p><strong>Activated nodes missing from graph:</strong> ${result.missingGraphNodes.join(
+                  ", "
+                )}</p>`
               : ""
           }
 
-          <p><strong>Primary strategy:</strong> ${recommendation.primary.label}</p>
-          <p><strong>Recommendation mode:</strong> ${recommendation.modeLabel}</p>
-          <p><strong>Intensity:</strong> ${recommendation.intensity}</p>
-          <p><strong>Message:</strong> ${recommendation.primary.message}</p>
-          <p><strong>Next review:</strong> ${recommendation.nextReviewPoint}</p>
+          <p><strong>Likely issues:</strong> ${renderList(diagnosis.likelyIssues)}</p>
+          <p><strong>Confidence flags:</strong> ${renderList(diagnosis.confidenceFlags)}</p>
+          <p><strong>Risk flags:</strong> ${renderList(diagnosis.riskFlags)}</p>
+          <p><strong>Contraindications:</strong> ${renderList(diagnosis.contraindications)}</p>
 
-          ${
-            recommendation.secondary.length
-              ? `<p><strong>Secondary:</strong> ${recommendation.secondary.map(item => item.label).join(", ")}</p>`
-              : ""
-          }
-
-          ${
-            recommendation.delayed.length
-              ? `<p><strong>Delayed:</strong> ${recommendation.delayed.map(item => `${item.label} — ${item.reason}`).join("<br>")}</p>`
-              : ""
-          }
-
-          ${
-            recommendation.blocked.length
-              ? `<p><strong>Blocked:</strong> ${recommendation.blocked.map(item => `${item.label} — ${item.reason}`).join("<br>")}</p>`
-              : ""
-          }
-
-          ${
-            recommendation.safetyCaveats.length
-              ? `<p><strong>Safety caveats:</strong><br>${recommendation.safetyCaveats.join("<br>")}</p>`
-              : ""
-          }
-
-          ${
-            recommendation.monitoringGuidance.length
-              ? `<p><strong>Monitoring guidance:</strong><br>${recommendation.monitoringGuidance.join("<br>")}</p>`
-              : ""
-          }
+          ${renderRecommendationSection(recommendation)}
         </section>
       `;
     })
