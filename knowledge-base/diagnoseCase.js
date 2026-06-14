@@ -208,6 +208,19 @@ const signals = [
     recommendationMode
   };
 
+    const recommendationPackage = buildRecommendationPackage({
+  recommendationMode,
+  activatedNodeIds,
+  likelyIssues: finalLikelyIssues,
+  confidenceFlags: finalConfidenceFlags,
+  riskFlags: finalRiskFlags,
+  contraindications: finalContraindications,
+  primaryStrategy: strategySelection.primaryStrategy,
+  secondaryStrategies: strategySelection.secondaryStrategies,
+  delayedStrategies: strategySelection.delayedStrategies,
+  blockedStrategies: strategySelection.blockedStrategies
+});
+
   const confidenceProfile = buildConfidenceProfile(partialDiagnosis);
 
   const recommendationPackage = buildRecommendationPackage({
