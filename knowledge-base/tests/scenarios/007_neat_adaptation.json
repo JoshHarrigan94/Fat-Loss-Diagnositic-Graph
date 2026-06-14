@@ -1,0 +1,31 @@
+{
+  "id": "007_neat_adaptation",
+  "label": "NEAT adaptation reduces expenditure",
+  "family": "neat_adaptation",
+  "difficulty": "intermediate",
+  "case": {
+    "inputs": {
+      "weightTrend": "stable",
+      "calorieTrackingAccuracy": "high",
+      "adherenceConsistency": "high",
+      "stepCountConsistency": "low",
+      "sedentaryTime": "high",
+      "dietDurationWeeks": 8,
+      "hungerPressure": "moderate"
+    }
+  },
+  "expected": {
+    "primaryIssue": "low_activity_bottleneck",
+    "recommendationMode": "recommendation_mode_monitor_only",
+    "primaryStrategy": "strategy_monitoring_confidence",
+    "shouldInclude": [
+      "step_count_consistency",
+      "sedentary_time",
+      "low_activity_bottleneck",
+      "strategy_activity_increase"
+    ],
+    "shouldAvoid": [
+      "strategy_medical_review"
+    ]
+  }
+}
