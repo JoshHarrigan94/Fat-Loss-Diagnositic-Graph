@@ -1,4 +1,5 @@
 import { downloadMarkdownReport } from "../../reports/downloadReport.js";
+import { renderInteractiveGraphExplorer } from "../../graph/interactiveGraphRenderer.js";
 import { getTodayDateString } from "./dataEntry.js";
 import { renderBarChart, renderLineChart } from "./charts.js";
 
@@ -7,7 +8,8 @@ const APP_PAGES = [
   { id: "explain", label: "Explain" },
   { id: "plan", label: "Plan" },
   { id: "history", label: "History" },
-  { id: "body-map", label: "Body Map" }
+  { id: "body-map", label: "Body Map" },
+  { id: "graph", label: "Graph" }
 ];
 
 const uiState = {
@@ -147,6 +149,8 @@ function renderPage(currentPage, result, diagnosis, bodyMap) {
       return renderHistoryPage(result, diagnosis);
     case "body-map":
       return renderBodyMapPage(result, diagnosis, bodyMap);
+    case "graph":
+      return renderGraphPage(result);
     case "home":
     default:
       return renderHomePage(result, diagnosis);
@@ -580,6 +584,22 @@ function renderBodyMapPage(result, diagnosis, bodyMap) {
           ${selectedNode ? renderNodeInspector(selectedNode, nodeEdges, diagnosis, result) : ""}
         </article>
       </section>
+    </section>
+  `;
+}
+
+function renderGraphPage(result) {
+  return `
+    <section class="page-flow">
+      <section class="page-intro">
+        <p class="eyebrow">Knowledge Graph</p>
+        <h2>Interactive graph explorer</h2>
+        <p class="summary">
+          This is the full interactive knowledge graph as a standalone surface. Use it when you want the raw connected map with search, category filtering, and node-level diagnostic context.
+        </p>
+      </section>
+
+      ${renderInteractiveGraphExplorer(result.graph)}
     </section>
   `;
 }
