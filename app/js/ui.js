@@ -1,88 +1,48 @@
-import { renderInteractiveGraphExplorer } from "../../graph/interactiveGraphRenderer.js";
-import { createSubgraphForDiagnosis } from "../../graph/graphEngine.js";
-import { renderGraphSvg } from "../../graph/graphRenderer.js";
 import { downloadMarkdownReport } from "../../reports/downloadReport.js";
 import { getTodayDateString } from "./dataEntry.js";
+import { renderBarChart, renderLineChart } from "./charts.js";
 
-import {
-  renderLineChart,
-  renderBarChart
-} from "./charts.js";
+const APP_PAGES = [
+  { id: "home", label: "Home" },
+  { id: "explain", label: "Explain" },
+  { id: "plan", label: "Plan" },
+  { id: "history", label: "History" },
+  { id: "body-map", label: "Body Map" }
+];
+
+const uiState = {
+  currentPage: "home",
+  selectedBodyMapNodeId: null
+};
 
 export function renderDashboard(result, actions = {}) {
   const root = document.querySelector("#app");
   if (!root) return;
 
-  const {
-    report,
-    analytics,
-    adherence,
-    deficit,
-    weightSignal,
-    diagnoses,
-    prediction,
-    regressionPrediction,
-    regressionModel,
-    modelEvaluation,
-    modelComparison,
-    mlSummary,
-    graph,
-    markdown,
-    timelineSummary,
-    rankedExplanationChains,
-    activeGraphNodes,
-    competingExplanations,
-    interventionExplanation,
-    graphReasoningSummary,
-    simulationSummary,
-    rawRows,
-    chartData,
-    importSummary,
-    importWarnings,
-    entryErrors,
-    entrySuccess,
-    knowledgeSummary
-  } = result;
+  const diagnosis = result.diagnosisRaw || {};
+  const bodyMap = buildBodyMapModel(result, diagnosis);
+  const currentPage = APP_PAGES.some(page => page.id === uiState.currentPage)
+    ? uiState.currentPage
+    : "home";
 
-  const subgraph =
-    result.subgraph ||
-    createSubgraphForDiagnosis(graph, report.diagnosis.id);
+  if (!bodyMap.nodes.some(node => node.id === uiState.selectedBodyMapNodeId)) {
+    uiState.selectedBodyMapNodeId = bodyMap.nodes[0]?.id || null;
+  }
 
   root.innerHTML = `
-    <section class="shell">
-      ${renderHero(report)}
-      ${renderUploadPanel(importSummary, importWarnings)}
-      ${renderManualEntryPanel(entryErrors, entrySuccess)}
-      ${renderDataTable(rawRows)}
-      ${renderCoreMetrics(report)}
-      ${renderWeightSignalMetrics(weightSignal)}
-      ${renderKnowledgePanel(knowledgeSummary)}
-      ${renderChartPanels(chartData)}
-      ${renderDeficitMetrics(deficit)}
-      ${renderAdherenceMetrics(adherence)}
-      ${renderPredictionMetrics(prediction)}
-      ${renderRegressionPanel(regressionPrediction, regressionModel)}
-      ${renderMLEvaluationPanel(modelEvaluation, modelComparison, mlSummary)}
-      ${renderSimulationPanel(simulationSummary)}
-      ${renderTimelinePanel(timelineSummary)}
-      ${renderDiagnosticGrid(report, diagnoses)}
-      ${renderGraphReasoningSummary(graphReasoningSummary)}
-      ${renderCompetingExplanations(competingExplanations)}
-      ${renderActiveMechanisms(activeGraphNodes)}
-      ${renderInterventions(interventionExplanation)}
-      ${renderGraphReasoningPanel(rankedExplanationChains)}
-      ${renderGraphPanel(subgraph)}
-      ${renderInteractiveGraphExplorer(graph)}
-      ${renderRecommendation(report)}
-      ${renderActions()}
-      ${renderSignalAudit(analytics)}
+    <section class="shell app-shell">
+      ${renderAppHeader(result, diagnosis)}
+      <main class="page-shell">
+        ${renderPage(currentPage, result, diagnosis, bodyMap)}
+      </main>
+      ${renderBottomNav(currentPage)}
     </section>
   `;
 
-  bindEvents(actions, markdown);
+  bindEvents(actions, result, bodyMap);
 }
 
-function bindEvents(actions, markdown) {
+function bindEvents(actions, result, bodyMap) {
   const upload = document.querySelector("#csv-upload");
   const download = document.querySelector("#download-report");
   const exportCsv = document.querySelector("#export-csv");
@@ -90,7 +50,7 @@ function bindEvents(actions, markdown) {
   const saveEntry = document.querySelector("#save-entry");
 
   if (upload && actions.onCsvUpload) {
-    upload.addEventListener("change", (event) => {
+    upload.addEventListener("change", event => {
       const file = event.target.files?.[0];
       if (file) actions.onCsvUpload(file);
     });
@@ -98,7 +58,7 @@ function bindEvents(actions, markdown) {
 
   if (download) {
     download.addEventListener("click", () => {
-      downloadMarkdownReport(markdown);
+      downloadMarkdownReport(result.markdown || "");
     });
   }
 
@@ -114,67 +74,558 @@ function bindEvents(actions, markdown) {
     saveEntry.addEventListener("click", actions.onSaveEntry);
   }
 
-  document.querySelectorAll("[data-delete-date]").forEach((button) => {
+  document.querySelectorAll("[data-delete-date]").forEach(button => {
     button.addEventListener("click", () => {
       const date = button.getAttribute("data-delete-date");
       if (actions.onDeleteEntry) actions.onDeleteEntry(date);
     });
   });
 
-  document.querySelectorAll("[data-edit-row]").forEach((button) => {
+  document.querySelectorAll("[data-edit-row]").forEach(button => {
     button.addEventListener("click", () => {
       const payload = JSON.parse(button.getAttribute("data-edit-row"));
       fillEntryForm(payload);
+      uiState.currentPage = "home";
       window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+
+  document.querySelectorAll("[data-page]").forEach(button => {
+    button.addEventListener("click", () => {
+      uiState.currentPage = button.getAttribute("data-page");
+      renderDashboard(result, actions);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+
+  document.querySelectorAll("[data-node-id]").forEach(button => {
+    button.addEventListener("click", () => {
+      uiState.selectedBodyMapNodeId = button.getAttribute("data-node-id");
+      if (bodyMap.nodes.some(node => node.id === uiState.selectedBodyMapNodeId)) {
+        renderDashboard(result, actions);
+      }
     });
   });
 }
 
-function renderHero(report) {
+function renderAppHeader(result, diagnosis) {
+  const confidence = diagnosis.confidenceProfile?.overall;
+  const mode = diagnosis.recommendationPackage?.modeLabel || formatLabel(diagnosis.recommendationMode);
+
   return `
-    <header class="hero">
+    <header class="app-header panel">
       <div>
-        <p class="eyebrow">Fat Loss Diagnostic Graph</p>
-        <h1>${escapeHtml(report.diagnosis.title)}</h1>
-        <p class="summary">${escapeHtml(report.diagnosis.summary)}</p>
+        <p class="eyebrow">Fat Loss Intelligence</p>
+        <h1>Confidence-centred fat-loss decision support</h1>
+        <p class="summary">
+          The graph stays responsible for the diagnosis. The app keeps the answer simple: what is happening, why, what to do next, and whether the current read is trustworthy.
+        </p>
       </div>
 
-      <div class="confidence-card">
-        <span>${report.diagnosis.confidence}%</span>
-        <p>Diagnostic confidence</p>
+      <div class="header-actions">
+        <article class="header-status-card">
+          <span>${escapeHtml(confidence?.label || `${result.report?.diagnosis?.confidence || "N/A"}%`)}</span>
+          <p>Confidence</p>
+        </article>
+        <article class="header-status-card">
+          <span>${escapeHtml(mode || "Monitoring")}</span>
+          <p>Recommendation mode</p>
+        </article>
+        <button id="download-report" class="secondary-button">Download report</button>
       </div>
     </header>
   `;
 }
 
-function renderUploadPanel(importSummary, importWarnings = []) {
+function renderPage(currentPage, result, diagnosis, bodyMap) {
+  switch (currentPage) {
+    case "explain":
+      return renderExplainPage(result, diagnosis);
+    case "plan":
+      return renderPlanPage(result, diagnosis);
+    case "history":
+      return renderHistoryPage(result, diagnosis);
+    case "body-map":
+      return renderBodyMapPage(result, diagnosis, bodyMap);
+    case "home":
+    default:
+      return renderHomePage(result, diagnosis);
+  }
+}
+
+function renderHomePage(result, diagnosis) {
+  const { report, chartData, entryErrors, entrySuccess, importSummary, importWarnings, rawRows } = result;
+  const latestRow = getLatestRow(rawRows);
+  const primary = diagnosis.recommendationPackage?.primary;
+  const confidence = diagnosis.confidenceProfile?.overall;
+  const story = getPrimaryStory(result, diagnosis);
+
   return `
-    <section class="panel upload-panel">
-      <div>
-        <p class="eyebrow">Input data</p>
-        <h2>Upload your fat-loss CSV</h2>
-        <p class="summary small">
-          Required columns: date, bodyweight_kg, calories, protein_g, carbs_g, fat_g, steps, sleep_hours, sleep_quality, training_load.
-        </p>
+    <section class="page-flow">
+      <section class="confidence-hero panel">
+        <div>
+          <p class="eyebrow">What is happening?</p>
+          <h2>${escapeHtml(report?.diagnosis?.title || "No diagnosis available yet")}</h2>
+          <p class="summary">${escapeHtml(report?.diagnosis?.summary || "Add data to generate a diagnosis.")}</p>
+          <div class="hero-tags">
+            ${tagChip(`Confidence: ${confidence?.label || `${report?.diagnosis?.confidence || "N/A"}%`}`)}
+            ${tagChip(`Mode: ${diagnosis.recommendationPackage?.modeLabel || formatLabel(diagnosis.recommendationMode)}`)}
+            ${tagChip(`Rows: ${rawRows?.length || 0}`)}
+          </div>
+        </div>
 
+        <div class="confidence-meter">
+          <strong>${report?.diagnosis?.confidence ?? "N/A"}%</strong>
+          <span>Can I trust this?</span>
+          <p>${escapeHtml(confidence?.reasons?.[0] || "Confidence will strengthen as trend, adherence, and risk signals line up.")}</p>
+        </div>
+      </section>
+
+      <section class="page-grid page-grid-home">
+        <article class="panel">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Current state</p>
+              <h2>What the graph thinks is most likely</h2>
+            </div>
+          </div>
+          <p class="summary small">${escapeHtml(report?.diagnosis?.summary || "No current state summary available.")}</p>
+          <div class="mini-metrics">
+            ${statPill("Trend", formatLabel(result.weightSignal?.momentum || "unknown"))}
+            ${statPill("Observed", `${format(result.analytics?.metrics?.observedLossPerWeek)} kg/wk`)}
+            ${statPill("Expected", `${format(result.analytics?.metrics?.expectedLossPerWeek)} kg/wk`)}
+            ${statPill("Volatility", `${format(result.analytics?.metrics?.weightVolatility)} kg`)}
+          </div>
+        </article>
+
+        <article class="panel recommendation-card-surface">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">What should I do next?</p>
+              <h2>${escapeHtml(primary?.label || "No active recommendation")}</h2>
+            </div>
+          </div>
+          <p class="summary small">${escapeHtml(primary?.message || report?.recommendation || "No recommendation available.")}</p>
+          <div class="cta-row">
+            <button class="primary-button" data-page="plan">Open plan</button>
+            <button class="secondary-button" data-page="explain">See reasoning</button>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Why is it happening?</p>
+              <h2>Body story</h2>
+            </div>
+          </div>
+          <p class="story-line">${escapeHtml(story.title)}</p>
+          <p class="summary small">${escapeHtml(story.summary)}</p>
+          <ul class="evidence-list compact-list">
+            ${story.points.length ? story.points.map(point => `<li>${escapeHtml(point)}</li>`).join("") : "<li>No supporting signals available yet.</li>"}
+          </ul>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Scale context</p>
+            <h2>Weight trend</h2>
+          </div>
+          <button class="secondary-button" data-page="history">View history</button>
+        </div>
         ${
-          importSummary
-            ? `<p class="upload-summary">Imported ${importSummary.totalRows} rows from ${escapeHtml(importSummary.firstDate)} to ${escapeHtml(importSummary.lastDate)}.</p>`
-            : `<p class="upload-summary">Currently using saved or demo data.</p>`
+          chartData?.weightTrend?.length
+            ? renderLineChart({
+                title: "Weight trend",
+                subtitle: "Daily bodyweight with the smoothing layer the engine uses to avoid overreacting.",
+                data: chartData.weightTrend,
+                yKey: "weight",
+                secondaryYKey: "rollingWeight",
+                yLabel: "Daily weight",
+                secondaryLabel: "7-day average",
+                valueSuffix: "kg"
+              })
+            : `<p class="summary small">Weight trend will appear after data is loaded.</p>`
         }
+      </section>
 
+      <section class="panel">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Check-in</p>
+            <h2>Load, update, or correct the current data</h2>
+          </div>
+          <span>App flow stays connected to the live dashboard</span>
+        </div>
+        ${renderCheckInSummary(importSummary, importWarnings, latestRow)}
+        ${renderManualEntryPanel(entryErrors, entrySuccess)}
+        ${renderRecentEntries(rawRows)}
+      </section>
+    </section>
+  `;
+}
+
+function renderExplainPage(result, diagnosis) {
+  const confidence = diagnosis.confidenceProfile || {};
+  const strongest = result.knowledgeSummary?.strongestDomain;
+  const alternatives = (result.competingExplanations || []).slice(1, 4);
+
+  return `
+    <section class="page-flow">
+      <section class="page-intro">
+        <p class="eyebrow">Explain</p>
+        <h2>Why the graph reached this conclusion</h2>
+        <p class="summary">The engine should stay legible. This page exposes the evidence, pathway, and uncertainty without forcing you through raw ontology internals.</p>
+      </section>
+
+      <section class="page-grid">
+        <article class="panel">
+          <div class="section-title">
+            <h2>Diagnostic summary</h2>
+            <span>${escapeHtml(result.report?.diagnosis?.title || "No diagnosis")}</span>
+          </div>
+          <p class="summary small">${escapeHtml(result.report?.diagnosis?.summary || "No summary available.")}</p>
+          ${strongest ? `<p class="summary small">Strongest domain: ${escapeHtml(strongest.title)}.</p>` : ""}
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <h2>Evidence strength</h2>
+            <span>${escapeHtml(confidence.overall?.label || "Not scored")}</span>
+          </div>
+          <div class="signal-stack">
+            ${confidenceCard("Overall", confidence.overall)}
+            ${confidenceCard("Measurement", confidence.measurement)}
+            ${confidenceCard("Intake", confidence.intake)}
+            ${confidenceCard("Risk", confidence.risk)}
+            ${confidenceCard("Strategy", confidence.strategy)}
+          </div>
+        </article>
+      </section>
+
+      <section class="page-grid">
+        <article class="panel">
+          <div class="section-title">
+            <h2>Evidence used</h2>
+            <span>${result.report?.evidence?.length || 0} signals</span>
+          </div>
+          <ul class="evidence-list">
+            ${(result.report?.evidence || []).length
+              ? result.report.evidence.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
+              : "<li>No evidence items available.</li>"}
+          </ul>
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <h2>Reasoning pathway</h2>
+            <span>Top routes</span>
+          </div>
+          <ul class="path-list">
+            ${(result.rankedExplanationChains || []).length
+              ? result.rankedExplanationChains
+                  .slice(0, 5)
+                  .map(chain => `<li>${escapeHtml(chain.chain)}</li>`)
+                  .join("")
+              : "<li>No ranked explanation chains available.</li>"}
+          </ul>
+        </article>
+      </section>
+
+      <section class="page-grid">
+        <article class="panel">
+          <div class="section-title">
+            <h2>Alternative explanations</h2>
+            <span>Competing hypotheses</span>
+          </div>
+          <div class="explanation-list">
+            ${alternatives.length
+              ? alternatives
+                  .map(
+                    item => `
+                      <article class="explanation-card compact-explanation-card">
+                        <div>
+                          <p class="eyebrow">Rank ${item.rank}</p>
+                          <h3>${escapeHtml(item.title)}</h3>
+                          <p>${escapeHtml(item.explanation)}</p>
+                        </div>
+                        <div class="score-stack">
+                          <span>${item.combinedScore}</span>
+                          <small>score</small>
+                        </div>
+                      </article>
+                    `
+                  )
+                  .join("")
+              : "<p class='summary small'>No alternative explanations available.</p>"}
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <h2>Confidence notes</h2>
+            <span>Trust context</span>
+          </div>
+          <ul class="evidence-list">
+            ${(confidence.overall?.reasons || []).length
+              ? confidence.overall.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join("")
+              : "<li>No confidence notes available.</li>"}
+          </ul>
+        </article>
+      </section>
+    </section>
+  `;
+}
+
+function renderPlanPage(result, diagnosis) {
+  const recommendation = diagnosis.recommendationPackage || {};
+  const latestRow = getLatestRow(result.rawRows);
+  const delayed = recommendation.delayedStrategies || diagnosis.delayedStrategies || [];
+  const blocked = recommendation.blockedStrategies || diagnosis.blockedStrategies || [];
+  const avoided = recommendation.avoidedStrategies || diagnosis.avoidedStrategies || [];
+  const contraindicated = recommendation.contraindicatedStrategies || diagnosis.contraindicatedStrategies || [];
+
+  return `
+    <section class="page-flow">
+      <section class="page-intro">
+        <p class="eyebrow">Plan</p>
+        <h2>What to do next and why this comes first</h2>
+        <p class="summary">Only active guidance appears as the current plan. Delayed or blocked strategies stay visible as context, not as live instructions.</p>
+      </section>
+
+      <section class="page-grid">
+        <article class="panel recommendation-card-surface">
+          <div class="section-title">
+            <h2>Current recommendation</h2>
+            <span>${escapeHtml(recommendation.modeLabel || formatLabel(diagnosis.recommendationMode))}</span>
+          </div>
+          <h3 class="plan-headline">${escapeHtml(recommendation.primary?.label || "No active strategy")}</h3>
+          <p class="summary small">${escapeHtml(recommendation.primary?.message || result.report?.recommendation || "No recommendation available.")}</p>
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <h2>Why this recommendation</h2>
+            <span>Graph rationale</span>
+          </div>
+          <p class="summary small">${escapeHtml(result.interventionExplanation?.summary || result.graphReasoningSummary?.narrative || "No recommendation rationale available.")}</p>
+          <ul class="evidence-list">
+            ${(recommendation.tacticalLevers || []).length
+              ? recommendation.tacticalLevers.map(lever => `<li><strong>${escapeHtml(lever.label)}:</strong> ${escapeHtml(lever.description)}</li>`).join("")
+              : "<li>No tactical levers specified.</li>"}
+          </ul>
+        </article>
+      </section>
+
+      <section class="page-grid">
+        <article class="panel">
+          <div class="section-title">
+            <h2>Current targets</h2>
+            <span>Latest row</span>
+          </div>
+          <div class="target-grid">
+            ${targetCard("Calories", latestRow?.calories, "kcal")}
+            ${targetCard("Protein", latestRow?.protein_g, "g")}
+            ${targetCard("Steps", latestRow?.steps, "")}
+            ${targetCard("Sleep", latestRow?.sleep_hours, "h")}
+            ${targetCard("Training load", latestRow?.training_load, "")}
+            ${targetCard("Weight", latestRow?.bodyweight_kg, "kg")}
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <h2>Review window</h2>
+            <span>When to reassess</span>
+          </div>
+          <p class="summary small">${escapeHtml(recommendation.nextReviewPoint || "Use the next meaningful run of consistent data before changing course.")}</p>
+          <div class="mini-metrics">
+            ${statPill("Rows loaded", `${result.rawRows?.length || 0}`)}
+            ${statPill("Adherence", `${format(result.adherence?.score, 0)}%`)}
+            ${statPill("Observed loss", `${format(result.analytics?.metrics?.observedLossPerWeek)} kg/wk`)}
+          </div>
+        </article>
+      </section>
+
+      <section class="page-grid">
+        <article class="panel">
+          <div class="section-title">
+            <h2>Secondary strategies</h2>
+            <span>Active support</span>
+          </div>
+          ${renderStrategyBucket(recommendation.secondaryStrategies || diagnosis.secondaryStrategies, "No active secondary strategies.")}
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <h2>Risk of changing course</h2>
+            <span>Do not confuse context with action</span>
+          </div>
+          ${renderStrategyGroups({
+            delayed,
+            blocked,
+            avoided,
+            contraindicated
+          })}
+        </article>
+      </section>
+    </section>
+  `;
+}
+
+function renderHistoryPage(result) {
+  return `
+    <section class="page-flow">
+      <section class="page-intro">
+        <p class="eyebrow">History</p>
+        <h2>How the diagnosis has moved over time</h2>
+        <p class="summary">This timeline keeps previous reads and recommendations legible without pretending to validate outcomes that have not happened yet.</p>
+      </section>
+
+      <section class="page-grid">
+        <article class="panel">
+          <div class="section-title">
+            <h2>Decision timeline</h2>
+            <span>${result.timelineSummary?.weeksAnalysed || 0} week(s)</span>
+          </div>
+          ${
+            result.timelineSummary?.items?.length
+              ? `<div class="timeline-list">${result.timelineSummary.items.map(renderTimelineItem).join("")}</div>`
+              : `<p class="summary small">No timeline available yet.</p>`
+          }
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <h2>Weekly confidence</h2>
+            <span>History view</span>
+          </div>
+          ${
+            result.chartData?.weeklyDiagnosis?.length
+              ? renderBarChart({
+                  title: "Weekly diagnosis confidence",
+                  subtitle: "Confidence by diagnostic window.",
+                  data: result.chartData.weeklyDiagnosis,
+                  labelKey: "label",
+                  valueKey: "confidence",
+                  valueSuffix: "%"
+                })
+              : `<p class="summary small">Weekly confidence history will appear after enough data is available.</p>`
+          }
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="section-title">
+          <h2>Recent entries</h2>
+          <span>${result.rawRows?.length || 0} rows</span>
+        </div>
+        ${renderRecentEntries(result.rawRows)}
+      </section>
+    </section>
+  `;
+}
+
+function renderBodyMapPage(result, diagnosis, bodyMap) {
+  const selectedNode = bodyMap.nodes.find(node => node.id === uiState.selectedBodyMapNodeId) || bodyMap.nodes[0] || null;
+  const nodeEdges = bodyMap.edges.filter(
+    edge => edge.source === selectedNode?.id || edge.target === selectedNode?.id
+  );
+
+  return `
+    <section class="page-flow">
+      <section class="page-intro">
+        <p class="eyebrow">Body Map</p>
+        <h2>Curated mechanism map</h2>
+        <p class="summary">This is a decision-support view of the physiology, not the raw ontology. It shows which mechanisms, relationships, and outcomes matter for the current diagnosis.</p>
+      </section>
+
+      <section class="page-grid body-map-layout">
+        <article class="panel">
+          <div class="section-title">
+            <h2>Current mechanism pathway</h2>
+            <span>${bodyMap.edges.length} relationships</span>
+          </div>
+          <div class="body-map-rail">
+            ${bodyMap.edges.length
+              ? bodyMap.edges.map(edge => renderBodyMapEdge(edge, bodyMap.nodeIndex)).join("")
+              : "<p class='summary small'>No body-map relationships available.</p>"}
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="section-title">
+            <h2>Node explorer</h2>
+            <span>${bodyMap.nodes.length} nodes</span>
+          </div>
+          <div class="node-chip-list">
+            ${bodyMap.nodes.length
+              ? bodyMap.nodes
+                  .map(
+                    node => `
+                      <button
+                        class="node-chip ${node.id === selectedNode?.id ? "active" : ""}"
+                        data-node-id="${escapeHtml(node.id)}"
+                      >
+                        ${escapeHtml(node.label)}
+                      </button>
+                    `
+                  )
+                  .join("")
+              : "<p class='summary small'>No nodes available.</p>"}
+          </div>
+
+          ${selectedNode ? renderNodeInspector(selectedNode, nodeEdges, diagnosis, result) : ""}
+        </article>
+      </section>
+    </section>
+  `;
+}
+
+function renderBottomNav(currentPage) {
+  return `
+    <nav class="bottom-nav">
+      ${APP_PAGES.map(
+        page => `
+          <button class="nav-pill ${page.id === currentPage ? "active" : ""}" data-page="${page.id}">
+            ${escapeHtml(page.label)}
+          </button>
+        `
+      ).join("")}
+    </nav>
+  `;
+}
+
+function renderCheckInSummary(importSummary, importWarnings = [], latestRow) {
+  return `
+    <div class="check-in-summary-grid">
+      <article class="check-in-summary-card">
+        <p class="eyebrow">Sample or saved data</p>
+        <h3>${importSummary?.totalRows || 0} rows loaded</h3>
+        <p>${escapeHtml(importSummary ? `From ${importSummary.firstDate} to ${importSummary.lastDate}.` : "Demo or local rows are active.")}</p>
+      </article>
+
+      <article class="check-in-summary-card">
+        <p class="eyebrow">Latest day</p>
+        <h3>${escapeHtml(latestRow?.date || "No entries")}</h3>
+        <p>${escapeHtml(latestRow ? `Weight ${format(latestRow.bodyweight_kg)} kg, calories ${format(latestRow.calories, 0)}.` : "Add a row to start diagnosis.")}</p>
+      </article>
+
+      <article class="check-in-summary-card">
+        <p class="eyebrow">Load CSV</p>
+        <label class="upload-button upload-button-inline">
+          Choose CSV
+          <input id="csv-upload" type="file" accept=".csv,text/csv" />
+        </label>
         ${
           importWarnings?.length
-            ? `<ul class="warning-list">${importWarnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul>`
-            : ""
+            ? `<ul class="warning-list">${importWarnings.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+            : `<p>No import warnings.</p>`
         }
-      </div>
-
-      <label class="upload-button">
-        Choose CSV
-        <input id="csv-upload" type="file" accept=".csv,text/csv" />
-      </label>
-    </section>
+      </article>
+    </div>
   `;
 }
 
@@ -182,15 +633,7 @@ function renderManualEntryPanel(entryErrors = [], entrySuccess = "") {
   const today = getTodayDateString();
 
   return `
-    <section class="panel data-entry-panel">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">Manual entry</p>
-          <h2>Add or edit daily data</h2>
-        </div>
-        <span>Saved locally in browser</span>
-      </div>
-
+    <section class="data-entry-panel data-entry-panel-inline">
       ${
         entrySuccess
           ? `<p class="success-message">${escapeHtml(entrySuccess)}</p>`
@@ -199,7 +642,7 @@ function renderManualEntryPanel(entryErrors = [], entrySuccess = "") {
 
       ${
         entryErrors?.length
-          ? `<ul class="error-list">${entryErrors.map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul>`
+          ? `<ul class="error-list">${entryErrors.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
           : ""
       }
 
@@ -212,8 +655,8 @@ function renderManualEntryPanel(entryErrors = [], entrySuccess = "") {
         ${inputField("fat_g", "Fat g", "number")}
         ${inputField("steps", "Steps", "number")}
         ${inputField("sleep_hours", "Sleep hours", "number", "", "0.1")}
-        ${inputField("sleep_quality", "Sleep quality 1–5", "number", "", "0.5")}
-        ${inputField("training_load", "Training load 1–10", "number", "", "0.5")}
+        ${inputField("sleep_quality", "Sleep quality 1-5", "number", "", "0.5")}
+        ${inputField("training_load", "Training load 1-10", "number", "", "0.5")}
       </div>
 
       <div class="entry-actions">
@@ -223,6 +666,237 @@ function renderManualEntryPanel(entryErrors = [], entrySuccess = "") {
       </div>
     </section>
   `;
+}
+
+function renderRecentEntries(rows = []) {
+  const recentRows = [...(rows || [])]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 10);
+
+  return `
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Weight</th>
+            <th>Calories</th>
+            <th>Protein</th>
+            <th>Steps</th>
+            <th>Sleep</th>
+            <th>Load</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            recentRows.length
+              ? recentRows.map(renderDataRow).join("")
+              : `<tr><td colspan="8">No rows yet.</td></tr>`
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderDataRow(row) {
+  const safePayload = escapeHtml(JSON.stringify(row));
+
+  return `
+    <tr>
+      <td>${escapeHtml(row.date)}</td>
+      <td>${format(row.bodyweight_kg)} kg</td>
+      <td>${format(row.calories, 0)}</td>
+      <td>${format(row.protein_g, 0)} g</td>
+      <td>${format(row.steps, 0)}</td>
+      <td>${format(row.sleep_hours)} h</td>
+      <td>${format(row.training_load)}</td>
+      <td class="table-actions">
+        <button class="tiny-button" data-edit-row="${safePayload}">Edit</button>
+        <button class="tiny-button danger" data-delete-date="${escapeHtml(row.date)}">Delete</button>
+      </td>
+    </tr>
+  `;
+}
+
+function renderTimelineItem(item) {
+  return `
+    <article class="timeline-item">
+      <div>
+        <p class="eyebrow">Week ${escapeHtml(item.week)}</p>
+        <h3>${escapeHtml(item.diagnosis || "No diagnosis")}</h3>
+        <p>${escapeHtml(item.dateRange || "No date range")}</p>
+      </div>
+
+      <div class="timeline-metrics">
+        <span>${escapeHtml(item.recommendation || "Recommendation not recorded")}</span>
+        <span>${escapeHtml(`${item.confidence ?? "N/A"}% confidence`)}</span>
+        <span>${escapeHtml(`${item.observedLoss ?? "N/A"} kg/wk observed`)}</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderStrategyGroups(groups) {
+  return `
+    <div class="strategy-groups">
+      ${strategyBucketCard("Delayed", groups.delayed, "Conditionally available later.")}
+      ${strategyBucketCard("Blocked", groups.blocked, "Not currently available.")}
+      ${strategyBucketCard("Avoided", groups.avoided, "Not recommended in the current state.")}
+      ${strategyBucketCard("Contraindicated", groups.contraindicated, "Should not be used with the current risk profile.")}
+    </div>
+  `;
+}
+
+function strategyBucketCard(title, items, emptyMessage) {
+  return `
+    <article class="strategy-bucket-card">
+      <p class="eyebrow">${escapeHtml(title)}</p>
+      ${renderStrategyBucket(items, emptyMessage)}
+    </article>
+  `;
+}
+
+function renderStrategyBucket(items = [], emptyMessage = "No items.") {
+  if (!items?.length) {
+    return `<p class="summary small">${escapeHtml(emptyMessage)}</p>`;
+  }
+
+  return `
+    <ul class="evidence-list compact-list">
+      ${items
+        .map(
+          item => `
+            <li>
+              <strong>${escapeHtml(item.label || formatLabel(item.id || item.strategy || "strategy"))}</strong>
+              ${item.reason ? `: ${escapeHtml(item.reason)}` : ""}
+            </li>
+          `
+        )
+        .join("")}
+    </ul>
+  `;
+}
+
+function buildBodyMapModel(result, diagnosis) {
+  const subgraph = result.subgraph || { nodes: [], edges: [] };
+  const nodeIndex = new Map((subgraph.nodes || []).map(node => [node.id, node]));
+  const topRoute = diagnosis.reasoningRoutes?.find(route => route.containsDecisionNode) || diagnosis.reasoningRoutes?.[0];
+  const routeNodeIds = topRoute?.path || [];
+  const routeEdges = topRoute?.edges || [];
+  const edges = (routeEdges.length ? routeEdges : subgraph.edges || []).slice(0, 10);
+  const nodes = routeNodeIds.length
+    ? routeNodeIds.map(nodeId => nodeIndex.get(nodeId)).filter(Boolean)
+    : (subgraph.nodes || []).slice(0, 12);
+
+  return {
+    nodes: nodes.map(node => ({
+      id: node.id,
+      label: node.label || formatLabel(node.id),
+      description: node.description || node.reasoningPurpose || "No node description available.",
+      type: node.type || "unknown",
+      coaching: node.coachingImplication || node.coaching || ""
+    })),
+    edges,
+    nodeIndex: new Map(
+      nodes.map(node => [
+        node.id,
+        {
+          id: node.id,
+          label: node.label,
+          description: node.description,
+          type: node.type,
+          coaching: node.coaching
+        }
+      ])
+    )
+  };
+}
+
+function renderBodyMapEdge(edge, nodeIndex) {
+  const source = nodeIndex.get(edge.source);
+  const target = nodeIndex.get(edge.target);
+
+  return `
+    <article class="body-edge-card">
+      <button class="body-edge-node" data-node-id="${escapeHtml(edge.source)}">${escapeHtml(source?.label || formatLabel(edge.source))}</button>
+      <div class="body-edge-link">
+        <span>${escapeHtml(formatLabel(edge.relationship || "related_to"))}</span>
+        <small>${escapeHtml(edge.explanation || "Mechanistic relationship")}</small>
+      </div>
+      <button class="body-edge-node" data-node-id="${escapeHtml(edge.target)}">${escapeHtml(target?.label || formatLabel(edge.target))}</button>
+    </article>
+  `;
+}
+
+function renderNodeInspector(node, edges, diagnosis, result) {
+  return `
+    <section class="node-inspector">
+      <p class="eyebrow">Selected node</p>
+      <h3>${escapeHtml(node.label)}</h3>
+      <p class="summary small">${escapeHtml(node.description)}</p>
+      <div class="mini-metrics">
+        ${statPill("Type", formatLabel(node.type))}
+        ${node.coaching ? statPill("Diagnostic relevance", node.coaching) : ""}
+        ${diagnosis.activatedNodeIds?.includes(node.id) ? statPill("Active", "Yes") : ""}
+      </div>
+      <h4>Connected relationships</h4>
+      <ul class="path-list compact-list">
+        ${edges.length
+          ? edges
+              .map(
+                edge => `
+                  <li>
+                    ${escapeHtml(formatLabel(edge.source))} ${escapeHtml(formatLabel(edge.relationship || "related_to"))} ${escapeHtml(formatLabel(edge.target))}
+                    ${edge.diagnosticUse ? ` - ${escapeHtml(edge.diagnosticUse)}` : ""}
+                  </li>
+                `
+              )
+              .join("")
+          : "<li>No connected relationships available.</li>"}
+      </ul>
+      ${
+        result.report?.graphPaths?.length
+          ? `
+            <h4>Associated reasoning routes</h4>
+            <ul class="path-list compact-list">
+              ${result.report.graphPaths
+                .filter(path => path.toLowerCase().includes(node.label.toLowerCase()))
+                .slice(0, 3)
+                .map(path => `<li>${escapeHtml(path)}</li>`)
+                .join("") || "<li>No direct route summaries available.</li>"}
+            </ul>
+          `
+          : ""
+      }
+    </section>
+  `;
+}
+
+function getPrimaryStory(result, diagnosis) {
+  const strongest = result.knowledgeSummary?.strongestDomain;
+  const title = strongest?.title || diagnosis.primaryHypothesis?.label || result.report?.diagnosis?.title || "Current body story";
+  const summary =
+    strongest?.description ||
+    diagnosis.primaryHypothesis?.explanation ||
+    result.graphReasoningSummary?.narrative ||
+    "The graph has not produced a detailed story yet.";
+
+  const points = [
+    ...(strongest?.supporting || []),
+    ...((result.report?.evidence || []).slice(0, 3))
+  ]
+    .filter(Boolean)
+    .slice(0, 5)
+    .map(item => formatLabel(item));
+
+  return { title, summary, points };
+}
+
+function getLatestRow(rows = []) {
+  if (!rows?.length) return null;
+  return [...rows].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 }
 
 function inputField(name, label, type = "text", value = "", step = "1") {
@@ -239,620 +913,46 @@ function inputField(name, label, type = "text", value = "", step = "1") {
   `;
 }
 
-function renderDataTable(rows = []) {
-  const recentRows = [...rows]
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 14);
-
-  return `
-    <section class="panel data-table-panel">
-      <div class="section-title">
-        <h2>Recent entries</h2>
-        <span>${rows.length} total rows</span>
-      </div>
-
-      <div class="data-table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Weight</th>
-              <th>Calories</th>
-              <th>Protein</th>
-              <th>Steps</th>
-              <th>Sleep</th>
-              <th>Load</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${
-              recentRows.length
-                ? recentRows.map(renderDataRow).join("")
-                : `<tr><td colspan="8">No rows yet.</td></tr>`
-            }
-          </tbody>
-        </table>
-      </div>
-    </section>
-  `;
-}
-
-function renderDataRow(row) {
-  const safePayload = escapeHtml(JSON.stringify(row));
-
-  return `
-    <tr>
-      <td>${escapeHtml(row.date)}</td>
-      <td>${format(row.bodyweight_kg)} kg</td>
-      <td>${format(row.calories, 0)}</td>
-      <td>${format(row.protein_g, 0)}g</td>
-      <td>${format(row.steps, 0)}</td>
-      <td>${format(row.sleep_hours)}h</td>
-      <td>${format(row.training_load)}</td>
-      <td class="table-actions">
-        <button class="tiny-button" data-edit-row="${safePayload}">Edit</button>
-        <button class="tiny-button danger" data-delete-date="${escapeHtml(row.date)}">Delete</button>
-      </td>
-    </tr>
-  `;
-}
-
-function renderCoreMetrics(report) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Expected loss", `${report.metrics.expectedLossPerWeek} kg/week`)}
-      ${metricCard("Observed loss", `${report.metrics.observedLossPerWeek} kg/week`)}
-      ${metricCard("Mismatch", `${report.metrics.mismatchKgPerWeek} kg/week`)}
-      ${metricCard("Volatility", `${report.metrics.weightVolatility} kg`)}
-    </section>
-  `;
-}
-
-function renderWeightSignalMetrics(weightSignal) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Weight momentum", formatLabel(weightSignal.momentum))}
-      ${metricCard("Start weight", `${format(weightSignal.startWeight)} kg`)}
-      ${metricCard("End weight", `${format(weightSignal.endWeight)} kg`)}
-      ${metricCard("Masking risk", weightSignal.flags.possibleMasking ? "Likely" : "Lower")}
-    </section>
-  `;
-}
-
-function renderKnowledgePanel(knowledgeSummary) {
-  if (!knowledgeSummary?.available) {
+function confidenceCard(label, confidence) {
+  if (!confidence) {
     return `
-      <section class="panel knowledge-panel">
-        <div class="section-title">
-          <h2>Diagnostic knowledge layer</h2>
-          <span>Domain reasoning</span>
-        </div>
-        <p class="summary small">No diagnostic knowledge interpretation available.</p>
-      </section>
-    `;
-  }
-
-  const strongest = knowledgeSummary.strongestDomain;
-
-  return `
-    <section class="panel knowledge-panel">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">Diagnostic knowledge layer</p>
-          <h2>${escapeHtml(strongest.title)}</h2>
-        </div>
-        <span>${strongest.confidence}% confidence</span>
-      </div>
-
-      <p class="summary small">${escapeHtml(knowledgeSummary.summary)}</p>
-
-      <div class="knowledge-grid">
-        <article class="knowledge-card primary">
-          <p class="eyebrow">Recommended next move</p>
-          <h3>${escapeHtml(knowledgeSummary.recommendation)}</h3>
-        </article>
-
-        <article class="knowledge-card">
-          <p class="eyebrow">Supporting signals</p>
-          ${
-            strongest.supporting.length
-              ? `<ul>${strongest.supporting.map((signal) => `<li>${escapeHtml(formatLabel(signal))}</li>`).join("")}</ul>`
-              : `<p>No strong supporting signals.</p>`
-          }
-        </article>
-
-        <article class="knowledge-card">
-          <p class="eyebrow">Weakening signals</p>
-          ${
-            strongest.weakening.length
-              ? `<ul>${strongest.weakening.map((signal) => `<li>${escapeHtml(formatLabel(signal))}</li>`).join("")}</ul>`
-              : `<p>No strong weakening signals.</p>`
-          }
-        </article>
-      </div>
-
-      <div class="section-title nested">
-        <h2>Competing diagnostic domains</h2>
-        <span>${knowledgeSummary.rankedDomains.length} domains</span>
-      </div>
-
-      <div class="domain-list">
-        ${knowledgeSummary.rankedDomains
-          .map(
-            (domain) => `
-              <article class="domain-row">
-                <div>
-                  <h3>${escapeHtml(domain.title)}</h3>
-                  <p>${escapeHtml(domain.description)}</p>
-                </div>
-                <div class="domain-score">
-                  <span>${domain.score}</span>
-                  <small>${domain.confidence}%</small>
-                </div>
-              </article>
-            `
-          )
-          .join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderChartPanels(chartData) {
-  if (!chartData) return "";
-
-  return `
-    <section class="chart-grid">
-      ${renderLineChart({
-        title: "Weight trend",
-        subtitle: "Daily weight with 7-day rolling average.",
-        data: chartData.weightTrend,
-        yKey: "weight",
-        secondaryYKey: "rollingWeight",
-        yLabel: "Daily weight",
-        secondaryLabel: "7-day average",
-        valueSuffix: "kg"
-      })}
-
-      ${renderLineChart({
-        title: "Calories vs weight",
-        subtitle: "Calories alongside rolling bodyweight.",
-        data: chartData.caloriesVsWeight,
-        yKey: "calories",
-        secondaryYKey: "rollingWeight",
-        yLabel: "Calories",
-        secondaryLabel: "Weight trend"
-      })}
-
-      ${renderLineChart({
-        title: "Steps trend",
-        subtitle: "Daily steps with 7-day rolling step average.",
-        data: chartData.stepsTrend,
-        yKey: "steps",
-        secondaryYKey: "rollingSteps",
-        yLabel: "Steps",
-        secondaryLabel: "7-day average"
-      })}
-
-      ${renderBarChart({
-        title: "Weekly diagnosis confidence",
-        subtitle: "Confidence score for each weekly diagnostic window.",
-        data: chartData.weeklyDiagnosis,
-        labelKey: "label",
-        valueKey: "confidence",
-        valueSuffix: "%"
-      })}
-    </section>
-  `;
-}
-
-function renderDeficitMetrics(deficit) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Deficit type", formatLabel(deficit.classification))}
-      ${metricCard("Daily deficit", `${format(deficit.dailyDeficit, 0)} kcal`)}
-      ${metricCard("Weekly deficit", `${format(deficit.weeklyDeficit, 0)} kcal`)}
-      ${metricCard("Average calories", `${format(deficit.averageCalories, 0)} kcal`)}
-    </section>
-  `;
-}
-
-function renderAdherenceMetrics(adherence) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Adherence score", `${format(adherence.score, 0)}%`)}
-      ${metricCard("Calorie deviation", `${format(adherence.calorieDeviation, 0)} kcal`)}
-      ${metricCard("Weekend drift", `${format(adherence.weekendDrift, 0)} kcal`)}
-      ${metricCard("Protein hit rate", `${format(adherence.proteinAdherenceRate * 100, 0)}%`)}
-    </section>
-  `;
-}
-
-function renderPredictionMetrics(prediction) {
-  return `
-    <section class="metrics-grid">
-      ${metricCard("Current weight", `${format(prediction.currentWeight)} kg`)}
-      ${metricCard("7-day prediction", `${format(prediction.predicted7Day)} kg`)}
-      ${metricCard("14-day prediction", `${format(prediction.predicted14Day)} kg`)}
-      ${metricCard("Prediction confidence", `${prediction.confidence}%`)}
-    </section>
-  `;
-}
-
-function renderRegressionPanel(regressionPrediction, regressionModel) {
-  if (!regressionPrediction?.available) {
-    return `
-      <section class="panel">
-        <div class="section-title">
-          <h2>ML prediction</h2>
-          <span>Regression model</span>
-        </div>
-        <p class="summary small">${escapeHtml(regressionPrediction?.reason || "Regression prediction unavailable.")}</p>
-      </section>
-    `;
-  }
-
-  return `
-    <section class="panel">
-      <div class="section-title">
-        <h2>ML prediction</h2>
-        <span>${escapeHtml(regressionPrediction.modelType)}</span>
-      </div>
-
-      <section class="metrics-grid compact">
-        ${metricCard("Predicted 7d change", `${format(regressionPrediction.predictedChange7d)} kg`)}
-        ${metricCard("Predicted 7d weight", `${format(regressionPrediction.predictedWeight7d)} kg`)}
-        ${metricCard("ML confidence", `${regressionPrediction.confidence}%`)}
-        ${metricCard("Training rows", `${regressionModel.trainingRows}`)}
-      </section>
-
-      <div class="section-title nested">
-        <h2>Top model drivers</h2>
-        <span>Feature contributions</span>
-      </div>
-
-      <ul class="path-list">
-        ${
-          regressionPrediction.contributions?.length
-            ? regressionPrediction.contributions
-                .map((item) => `<li>${escapeHtml(formatLabel(item.feature))}: ${format(item.contribution, 3)}</li>`)
-                .join("")
-            : "<li>Not enough data for contribution analysis.</li>"
-        }
-      </ul>
-    </section>
-  `;
-}
-
-function renderMLEvaluationPanel(modelEvaluation, modelComparison, mlSummary) {
-  if (!modelEvaluation?.available) {
-    return `
-      <section class="panel ml-eval-panel">
-        <div class="section-title">
-          <h2>ML evaluation</h2>
-          <span>Model quality</span>
-        </div>
-        <p class="summary small">${escapeHtml(modelEvaluation?.reason || "Not enough data to evaluate the model.")}</p>
-      </section>
-    `;
-  }
-
-  return `
-    <section class="panel ml-eval-panel">
-      <div class="section-title">
-        <h2>ML evaluation</h2>
-        <span>Model quality</span>
-      </div>
-
-      <p class="summary small">${escapeHtml(mlSummary?.narrative || modelEvaluation.interpretation)}</p>
-
-      <section class="metrics-grid compact">
-        ${metricCard("MAE", `${format(modelEvaluation.mae)} kg`)}
-        ${metricCard("Bias", `${format(modelEvaluation.bias)} kg`)}
-        ${metricCard("≤0.25kg accuracy", `${format(modelEvaluation.accuracyWithin025 * 100, 0)}%`)}
-        ${metricCard("≤0.5kg accuracy", `${format(modelEvaluation.accuracyWithin05 * 100, 0)}%`)}
-      </section>
-
-      ${
-        modelComparison?.available
-          ? `<div class="model-comparison-box">
-              <h3>Model comparison</h3>
-              <p>${escapeHtml(modelComparison.recommendation)}</p>
-              <span>Regression confidence delta: ${format(modelComparison.confidenceDelta, 0)}%</span>
-            </div>`
-          : ""
-      }
-    </section>
-  `;
-}
-
-function renderSimulationPanel(simulationSummary) {
-  if (!simulationSummary?.available) {
-    return `
-      <section class="panel simulation-panel">
-        <div class="section-title">
-          <h2>Intervention simulator</h2>
-          <span>Scenario layer</span>
-        </div>
-        <p class="summary small">No intervention simulations available.</p>
-      </section>
-    `;
-  }
-
-  return `
-    <section class="panel simulation-panel">
-      <div class="section-title">
-        <h2>Intervention simulator</h2>
-        <span>What should change first?</span>
-      </div>
-
-      <p class="summary small">${escapeHtml(simulationSummary.summary)}</p>
-
-      <div class="simulation-grid">
-        ${simulationSummary.items
-          .map(
-            (item) => `
-              <article class="simulation-card">
-                <div>
-                  <p class="eyebrow">${escapeHtml(item.impact.pathwayAffected)}</p>
-                  <h3>${escapeHtml(item.label)}</h3>
-                  <p>${escapeHtml(item.impact.likelyDiagnosisShift)}</p>
-                </div>
-
-                <div class="simulation-impact">
-                  <span>${format(item.impact.estimatedWeeklyLossDelta)} kg/wk</span>
-                  <small>estimated delta</small>
-                </div>
-
-                <footer>
-                  <span>Projected loss: ${format(item.impact.projectedExpectedLoss)} kg/wk</span>
-                  <span>Risk: ${escapeHtml(item.impact.risk)}</span>
-                </footer>
-              </article>
-            `
-          )
-          .join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderTimelinePanel(timelineSummary) {
-  if (!timelineSummary?.available) return "";
-
-  return `
-    <section class="panel">
-      <div class="section-title">
-        <h2>Diagnostic timeline</h2>
-        <span>${timelineSummary.weeksAnalysed} week(s)</span>
-      </div>
-
-      <p class="summary small">${escapeHtml(timelineSummary.summary)}</p>
-
-      <div class="timeline-list">
-        ${timelineSummary.items
-          .map(
-            (item) => `
-              <article class="timeline-item">
-                <div>
-                  <p class="eyebrow">Week ${item.week}</p>
-                  <h3>${escapeHtml(item.diagnosis)}</h3>
-                  <p>${escapeHtml(item.dateRange)}</p>
-                </div>
-
-                <div class="timeline-metrics">
-                  <span>${item.confidence}% confidence</span>
-                  <span>${item.observedLoss} kg/wk observed</span>
-                  <span>${item.maskingRisk} masking</span>
-                </div>
-              </article>
-            `
-          )
-          .join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderDiagnosticGrid(report, diagnoses) {
-  return `
-    <section class="content-grid">
-      <article class="panel">
-        <div class="section-title">
-          <h2>Evidence</h2>
-          <span>${diagnoses.length} rule(s) triggered</span>
-        </div>
-
-        <ul class="evidence-list">
-          ${report.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-        </ul>
+      <article class="confidence-detail-card">
+        <p class="eyebrow">${escapeHtml(label)}</p>
+        <strong>N/A</strong>
+        <p>No confidence score available.</p>
       </article>
+    `;
+  }
 
-      <article class="panel">
-        <div class="section-title">
-          <h2>Graph pathways</h2>
-          <span>Reasoning route</span>
-        </div>
-
-        <ul class="path-list">
-          ${report.graphPaths.map((path) => `<li>${escapeHtml(path)}</li>`).join("")}
-        </ul>
-      </article>
-    </section>
+  return `
+    <article class="confidence-detail-card">
+      <p class="eyebrow">${escapeHtml(label)}</p>
+      <strong>${escapeHtml(confidence.label || format(confidence.score * 100, 0))}</strong>
+      <p>${escapeHtml(confidence.reasons?.[0] || "Confidence rationale unavailable.")}</p>
+    </article>
   `;
 }
 
-function renderGraphReasoningSummary(graphReasoningSummary) {
-  if (!graphReasoningSummary) return "";
-
+function targetCard(label, value, suffix) {
   return `
-    <section class="panel graph-utility-panel">
-      <div class="section-title">
-        <h2>Graph reasoning summary</h2>
-        <span>Active causal interpretation</span>
-      </div>
-
-      <p class="summary small">${escapeHtml(graphReasoningSummary.narrative)}</p>
-    </section>
+    <article class="target-card">
+      <p>${escapeHtml(label)}</p>
+      <strong>${escapeHtml(value === undefined || value === null || Number.isNaN(Number(value)) ? "N/A" : `${format(value, suffix === "" ? 0 : 1)}${suffix ? ` ${suffix}` : ""}`)}</strong>
+    </article>
   `;
 }
 
-function renderCompetingExplanations(competingExplanations = []) {
+function statPill(label, value) {
   return `
-    <section class="panel graph-utility-panel">
-      <div class="section-title">
-        <h2>Competing explanations</h2>
-        <span>Rule + graph ranking</span>
-      </div>
-
-      <div class="explanation-list">
-        ${
-          competingExplanations.length
-            ? competingExplanations
-                .map(
-                  (item) => `
-                    <article class="explanation-card">
-                      <div>
-                        <p class="eyebrow">Rank ${item.rank}</p>
-                        <h3>${escapeHtml(item.title)}</h3>
-                        <p>${escapeHtml(item.explanation)}</p>
-                      </div>
-
-                      <div class="score-stack">
-                        <span>${item.combinedScore}</span>
-                        <small>combined</small>
-                      </div>
-                    </article>
-                  `
-                )
-                .join("")
-            : "<p class='summary small'>No competing explanations available.</p>"
-        }
-      </div>
-    </section>
+    <span class="stat-pill">
+      <strong>${escapeHtml(label)}</strong>
+      ${escapeHtml(value)}
+    </span>
   `;
 }
 
-function renderActiveMechanisms(activeGraphNodes = []) {
-  return `
-    <section class="panel graph-utility-panel">
-      <div class="section-title">
-        <h2>Active graph mechanisms</h2>
-        <span>${activeGraphNodes.length} active</span>
-      </div>
-
-      <div class="mechanism-tags">
-        ${
-          activeGraphNodes.length
-            ? activeGraphNodes
-                .map((node) => `<span>${escapeHtml(formatLabel(node))}</span>`)
-                .join("")
-            : "<span>No active mechanisms</span>"
-        }
-      </div>
-    </section>
-  `;
-}
-
-function renderInterventions(interventionExplanation) {
-  const interventions = interventionExplanation?.interventions || [];
-
-  return `
-    <section class="panel graph-utility-panel">
-      <div class="section-title">
-        <h2>Intervention levers</h2>
-        <span>What would change the diagnosis?</span>
-      </div>
-
-      <p class="summary small">${escapeHtml(interventionExplanation?.summary || "")}</p>
-
-      <div class="intervention-grid">
-        ${
-          interventions.length
-            ? interventions
-                .map(
-                  (item) => `
-                    <article class="intervention-card">
-                      <h3>${escapeHtml(item.lever)}</h3>
-                      <p>${escapeHtml(item.rationale)}</p>
-                      <span>Risk: ${escapeHtml(item.risk)}</span>
-                    </article>
-                  `
-                )
-                .join("")
-            : "<p class='summary small'>No interventions mapped.</p>"
-        }
-      </div>
-    </section>
-  `;
-}
-
-function renderGraphReasoningPanel(rankedExplanationChains = []) {
-  return `
-    <section class="panel">
-      <div class="section-title">
-        <h2>Graph pathway explorer</h2>
-        <span>Ranked explanation chains</span>
-      </div>
-
-      <ul class="path-list">
-        ${
-          rankedExplanationChains.length
-            ? rankedExplanationChains
-                .slice(0, 5)
-                .map((chain) => `<li>${escapeHtml(chain.chain)} <strong>(${chain.score})</strong></li>`)
-                .join("")
-            : "<li>No ranked graph reasoning available.</li>"
-        }
-      </ul>
-    </section>
-  `;
-}
-
-function renderGraphPanel(subgraph) {
-  return `
-    <section class="panel graph-panel">
-      <div class="section-title">
-        <h2>Knowledge graph</h2>
-        <span>Diagnosis subgraph</span>
-      </div>
-
-      ${renderGraphSvg(subgraph)}
-    </section>
-  `;
-}
-
-function renderRecommendation(report) {
-  return `
-    <section class="panel recommendation">
-      <p class="eyebrow">Recommended action</p>
-      <h2>${escapeHtml(report.recommendation)}</h2>
-    </section>
-  `;
-}
-
-function renderActions() {
-  return `
-    <section class="action-row">
-      <button id="download-report" class="primary-button">
-        Download Markdown Report
-      </button>
-    </section>
-  `;
-}
-
-function renderSignalAudit(analytics) {
-  return `
-    <section class="panel debug">
-      <div class="section-title">
-        <h2>Signal audit</h2>
-        <span>Rules input</span>
-      </div>
-
-      <pre>${escapeHtml(JSON.stringify(analytics.signals, null, 2))}</pre>
-    </section>
-  `;
+function tagChip(label) {
+  return `<span class="tag-chip">${escapeHtml(label)}</span>`;
 }
 
 export function renderError(error) {
@@ -863,7 +963,7 @@ export function renderError(error) {
 
   root.innerHTML = `
     <section class="error">
-      <p class="eyebrow">Fat Loss Diagnostic Graph</p>
+      <p class="eyebrow">Fat Loss Intelligence</p>
       <h1>Diagnostic engine failed to run</h1>
       <p>${escapeHtml(error.message)}</p>
     </section>
@@ -877,15 +977,6 @@ function fillEntryForm(row) {
   });
 }
 
-function metricCard(label, value) {
-  return `
-    <article class="metric-card">
-      <p>${escapeHtml(label)}</p>
-      <strong>${escapeHtml(value)}</strong>
-    </article>
-  `;
-}
-
 function format(value, decimals = 2) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
   return Number(value).toFixed(decimals);
@@ -894,7 +985,7 @@ function format(value, decimals = 2) {
 function formatLabel(value) {
   return String(value || "unknown")
     .replaceAll("_", " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+    .replace(/\b\w/g, char => char.toUpperCase());
 }
 
 function escapeHtml(value) {

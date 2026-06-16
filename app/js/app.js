@@ -159,6 +159,7 @@ function buildDashboardResult(rows) {
 
   const result = {
     report,
+    diagnosisRaw: diagnosis,
     analytics,
     adherence,
     deficit,
@@ -316,4 +317,3 @@ function formatLabel(value) {
 }
 
 initialise();
- 
