@@ -316,3 +316,4 @@ function formatLabel(value) {
 }
 
 initialise();
+ 
