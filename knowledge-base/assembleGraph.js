@@ -12,31 +12,38 @@ import {
   sharedDecisionNodes
 } from "./ontology/sharedDecisionNodes.js";
 
+import {
+  normalizeEdgeSchema
+} from "./reasoning/edgeNormalizer.js";
+
 export function assembleKnowledgeGraph() {
+  const domainNodes = KNOWLEDGE_DOMAINS.flatMap(
+    domain => domain.nodes || []
+  );
 
-  const domainNodes =
-    KNOWLEDGE_DOMAINS.flatMap(
-      domain => domain.nodes || []
-    );
+  const domainEdges = KNOWLEDGE_DOMAINS.flatMap(domain =>
+    (domain.edges || []).map(edge =>
+      normalizeEdgeSchema(edge, {
+        diagnosticUse:
+          "Legacy domain edge normalized into the governed assembled-graph schema."
+      })
+    )
+  );
 
-  const domainEdges =
-    KNOWLEDGE_DOMAINS.flatMap(
-      domain => domain.edges || []
-    );
+  const nodes = dedupeNodes([
+    ...sharedDecisionNodes,
+    ...domainNodes
+  ]);
 
   return {
-    nodes: [
-      ...sharedDecisionNodes,
-      ...domainNodes
-    ],
+    nodes,
 
     edges: domainEdges,
 
     metadata: {
       domainCount: KNOWLEDGE_DOMAINS.length,
       nodeCount:
-        sharedDecisionNodes.length +
-        domainNodes.length,
+        nodes.length,
       edgeCount:
         domainEdges.length
     }

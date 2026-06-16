@@ -1,5 +1,6 @@
 import { KNOWLEDGE_DOMAINS } from "./domains/index.js";
 import { sharedDecisionNodes } from "./ontology/sharedDecisionNodes.js";
+import { normalizeEdgeSchema } from "./reasoning/edgeNormalizer.js";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -33,7 +34,10 @@ export function validateKnowledgeBase() {
 
   const allEdges = domains.flatMap(domain =>
     asArray(domain?.edges).map(edge => ({
-      ...edge,
+      ...normalizeEdgeSchema(edge, {
+        diagnosticUse:
+          "Legacy domain edge normalized into the governed validation schema."
+      }),
       __domainId: domain.id || "unknown-domain"
     }))
   );

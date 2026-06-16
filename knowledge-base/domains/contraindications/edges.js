@@ -1,5 +1,17 @@
 export const contraindicationsEdges = [
   {
+    source: "contraindications",
+    target: "contraindication_screening",
+    relationship: "feeds",
+    strength: "high",
+    direction: "decision_input",
+    explanation:
+      "The shared contraindications layer feeds the explicit contraindication-screening process.",
+    diagnosticUse:
+      "Connects the shared safety layer to the contraindication domain."
+  },
+
+  {
     source: "contraindication_screening",
     target: "risk_adjusted_recommendations",
     relationship: "gates",
