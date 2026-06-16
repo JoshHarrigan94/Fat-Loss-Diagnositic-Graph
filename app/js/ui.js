@@ -44,7 +44,9 @@ export function renderDashboard(result, actions = {}) {
     knowledgeSummary
   } = result;
 
-  const subgraph = createSubgraphForDiagnosis(graph, report.diagnosis.id);
+  const subgraph =
+    result.subgraph ||
+    createSubgraphForDiagnosis(graph, report.diagnosis.id);
 
   root.innerHTML = `
     <section class="shell">

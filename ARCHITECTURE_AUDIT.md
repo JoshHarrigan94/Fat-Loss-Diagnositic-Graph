@@ -774,3 +774,29 @@ The project is successful when:
 The graph is the product.
 
 Everything else is a consumer.
+## Hardening Pass Notes
+
+This repo still contains legacy reasoning adapters, but they are now isolated to migration-only signal generation:
+
+- `knowledge-base/reasoning/legacyKnowledgeAdapter.js`
+- `knowledge-base/reasoning/legacyRulesAdapter.js`
+
+The hardening pass changed the behavioural contract in these ways:
+
+- Diagnosis state classification is shared between `diagnoseCase()` and `diagnoseRows()`.
+- Stable weight no longer auto-activates low confidence.
+- Confidence now distinguishes interpretation from low-confidence states.
+- Strategy selection follows an explicit diagnostic hierarchy rather than a generic stable-weight fallback.
+- Delayed strategies are separated from active strategies in both engine output and scenario tests.
+- Assembled graph edges are normalized to the governed schema:
+  - `source`
+  - `target`
+  - `relationship`
+  - `strength`
+  - `direction`
+  - `explanation`
+  - `diagnosticUse`
+
+Future cleanup target:
+
+- Remove legacy adapters after their remaining heuristics have native ontology coverage and dedicated tests.
