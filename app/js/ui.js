@@ -6,7 +6,7 @@ import { renderLineChart } from "./charts.js";
 
 const APP_PAGES = [
   { id: "diagnostic", label: "Diagnostic View" },
-  { id: "atlas", label: "Atlas View" },
+  { id: "atlas", label: "Atlas Hero View" },
   { id: "pathway", label: "Pathway View" }
 ];
 
@@ -30,8 +30,8 @@ export function renderDashboard(result, actions = {}) {
 
   root.innerHTML = `
     <section class="shell atlas-app-shell">
-      ${renderAppHeader(result, diagnosis)}
-      <main class="atlas-page-shell">
+      ${renderAppHeader(result, diagnosis, currentPage)}
+      <main class="atlas-page-shell atlas-page-shell-${currentPage}">
         ${renderPage(currentPage, result, diagnosis, {
           diagnosticAtlas,
           atlasView,
@@ -204,7 +204,7 @@ function renderPage(currentPage, result, diagnosis, models) {
   }
 }
 
-function renderAppHeader(result, diagnosis) {
+function renderAppHeader(result, diagnosis, currentPage) {
   const confidence = diagnosis.confidenceProfile?.overall;
   const dominantSystems = getDominantSystems(buildAtlasViewModel({
     graph: result.graph,
@@ -213,6 +213,34 @@ function renderAppHeader(result, diagnosis) {
     selectedNodeId: uiState.selectedAtlasNodeId,
     selectedPathwayIndex: uiState.selectedPathwayIndex
   }));
+  const diagnosisTitle = escapeHtml(result.report?.diagnosis?.title || "Diagnostic read");
+  const confidenceLabel = escapeHtml(confidence?.label || `${result.report?.diagnosis?.confidence || "N/A"}%`);
+  const dominantPathways = escapeHtml(dominantSystems.join(" · ") || "Systems");
+  const isPosterPage = currentPage === "atlas" || currentPage === "pathway";
+
+  if (isPosterPage) {
+    const posterLabel = currentPage === "atlas" ? "Atlas Hero View" : "Pathway View";
+    const posterSummary = currentPage === "atlas"
+      ? "The atlas is the page: a standalone physiological plate built from the diagnostic graph, with outcomes at the crown, system hubs in the field, and foundation inputs feeding the map."
+      : "Reasoning becomes visible here. The same atlas plate is used as the stage for diagnostic routes, with focused pathways inked across the systems that matter.";
+
+    return `
+      <header class="app-header atlas-header atlas-header-poster">
+        <div class="atlas-title-block">
+          <p class="eyebrow">${posterLabel}</p>
+          <h1>A living map of the human fat-loss system.</h1>
+          <p class="summary">${posterSummary}</p>
+        </div>
+
+        <div class="atlas-header-ledger">
+          <span><strong>${diagnosisTitle}</strong> current diagnostic state</span>
+          <span><strong>${confidenceLabel}</strong> confidence</span>
+          <span><strong>${dominantPathways}</strong> dominant pathways</span>
+          <button id="download-report" class="secondary-button">Download report</button>
+        </div>
+      </header>
+    `;
+  }
 
   return `
     <header class="app-header atlas-header">
@@ -226,15 +254,15 @@ function renderAppHeader(result, diagnosis) {
 
       <div class="atlas-header-meta">
         <article class="atlas-meta-card">
-          <span>${escapeHtml(result.report?.diagnosis?.title || "Diagnostic read")}</span>
+          <span>${diagnosisTitle}</span>
           <p>Current diagnostic state</p>
         </article>
         <article class="atlas-meta-card">
-          <span>${escapeHtml(confidence?.label || `${result.report?.diagnosis?.confidence || "N/A"}%`)}</span>
+          <span>${confidenceLabel}</span>
           <p>Confidence</p>
         </article>
         <article class="atlas-meta-card">
-          <span>${escapeHtml(dominantSystems.join(" · ") || "Systems")}</span>
+          <span>${dominantPathways}</span>
           <p>Dominant pathways</p>
         </article>
         <button id="download-report" class="secondary-button">Download report</button>
@@ -353,36 +381,32 @@ function renderDiagnosticPage(result, diagnosis, model) {
 
 function renderAtlasPage(result, diagnosis, model) {
   return `
-    <section class="page-flow">
-      <section class="page-intro">
-        <p class="eyebrow">Atlas View</p>
-        <h2>Physiological blueprint</h2>
+    <section class="page-flow atlas-hero-page">
+      <section class="atlas-hero-intro">
+        <div>
+          <p class="eyebrow">Atlas Hero View</p>
+          <h2>The standalone physiological plate</h2>
+        </div>
         <p class="summary">
-          The atlas turns the knowledge graph into an authored scientific plate: outcomes across the top, systems through the centre, inputs along the base, and the currently relevant pathways drawn through the structure.
+          This is the screenshot moment: the fat-loss system rendered as a scientific atlas, with outcomes at the top, systems clustered through the middle, and inputs feeding the map from below.
         </p>
       </section>
 
-      <section class="atlas-view-layout">
-        <article class="panel atlas-primary-canvas">
-          ${renderAtlasScene(model, { interactive: true })}
-        </article>
-
-        <aside class="panel atlas-side-panel">
-          ${renderAtlasNodePanel(model, diagnosis)}
-        </aside>
-      </section>
+      ${renderAtlasScene(model, { interactive: true })}
     </section>
   `;
 }
 
 function renderPathwayPage(result, diagnosis, model) {
   return `
-    <section class="page-flow">
-      <section class="page-intro">
-        <p class="eyebrow">Pathway View</p>
-        <h2>Reasoning becoming visible</h2>
+    <section class="page-flow atlas-hero-page">
+      <section class="atlas-hero-intro atlas-hero-intro-pathway">
+        <div>
+          <p class="eyebrow">Pathway View</p>
+          <h2>Reasoning becoming visible</h2>
+        </div>
         <p class="summary">
-          This view selects a likely physiological explanation and draws the pathway across the atlas like ink on paper.
+          Each selected explanation traces itself across the same atlas plate, so the logic feels like a pathway through the physiology rather than a list of disconnected reasons.
         </p>
       </section>
 
@@ -397,85 +421,14 @@ function renderPathwayPage(result, diagnosis, model) {
         `).join("")}
       </section>
 
-      <section class="atlas-view-layout">
-        <article class="panel atlas-primary-canvas">
-          ${renderAtlasScene(model, { interactive: true, pathwayMode: true })}
-        </article>
-
-        <aside class="panel atlas-side-panel">
-          <div class="atlas-pathway-copy">
-            <p class="eyebrow">Selected pathway</p>
-            <h3>${escapeHtml(model.activePathway?.label || "No pathway selected")}</h3>
-            <p>${escapeHtml(model.activePathway?.narrative || model.caption)}</p>
-          </div>
-
-          <div class="atlas-chain-panel">
-            <p class="eyebrow">Atlas chain</p>
-            <ol class="atlas-chain-list">
-              ${(model.activePathway?.nodeIds || []).map(nodeId => {
-                const node = model.nodes.find(item => item.id === nodeId);
-                return `<li>${escapeHtml(node?.label || formatLabel(nodeId))}</li>`;
-              }).join("")}
-            </ol>
-          </div>
-
-          ${renderAtlasNodePanel(model, diagnosis)}
-        </aside>
+      <section class="atlas-pathway-story">
+        <p class="eyebrow">Selected pathway</p>
+        <h3>${escapeHtml(model.activePathway?.label || "No pathway selected")}</h3>
+        <p>${escapeHtml(model.activePathway?.narrative || model.caption)}</p>
       </section>
+
+      ${renderAtlasScene(model, { interactive: true, pathwayMode: true })}
     </section>
-  `;
-}
-
-function renderAtlasNodePanel(model, diagnosis) {
-  const details = model.nodeDetails;
-  const primary = diagnosis.recommendationPackage?.primary;
-
-  if (!details) {
-    return `
-      <div class="atlas-node-panel-empty">
-        <p>Select a node to inspect its physiology, relationships, and intervention relevance.</p>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="atlas-node-panel">
-      <p class="eyebrow">Atlas annotation</p>
-      <h3>${escapeHtml(details.label)}</h3>
-      <p>${escapeHtml(details.description)}</p>
-
-      <section class="atlas-panel-block">
-        <h4>Diagnostic relevance</h4>
-        <p>${escapeHtml(details.coaching)}</p>
-      </section>
-
-      <section class="atlas-panel-block">
-        <h4>Relationships</h4>
-        <ul class="path-list compact-list">
-          ${details.relationships.length
-            ? details.relationships.map(item => `<li>${escapeHtml(item.label)}</li>`).join("")
-            : "<li>No direct atlas relationships available.</li>"}
-        </ul>
-      </section>
-
-      <section class="atlas-panel-block">
-        <h4>Interventions</h4>
-        <ul class="path-list compact-list">
-          ${details.interventions.length
-            ? details.interventions.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
-            : `<li>${escapeHtml(primary?.label || "No intervention mapping available.")}</li>`}
-        </ul>
-      </section>
-
-      <section class="atlas-panel-block">
-        <h4>Evidence traces</h4>
-        <ul class="path-list compact-list">
-          ${details.evidence.length
-            ? details.evidence.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
-            : "<li>No evidence traces attached.</li>"}
-        </ul>
-      </section>
-    </div>
   `;
 }
 
