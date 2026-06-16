@@ -31,10 +31,12 @@ export function buildConfidenceProfile(diagnosis) {
     activatedNodeIds = [],
     likelyIssues = [],
     confidenceFlags = [],
+    interpretationFlags = [],
     riskFlags = [],
     contraindications = [],
     primaryStrategy = null,
-    recommendationMode = null
+    recommendationMode = null,
+    signalProfile = {}
   } = diagnosis;
 
   /**
@@ -43,28 +45,20 @@ export function buildConfidenceProfile(diagnosis) {
   let measurementScore = 0.75;
   const measurementReasons = [];
 
-  if (
-    hasAny(activatedNodeIds, [
-      "measurement_noise_interpretation",
-      "scale_weight_variability",
-      "water_retention_from_stress",
-      "training_inflammation_shift"
-    ])
-  ) {
+  if (signalProfile.scaleNoiseHigh) {
     measurementScore -= 0.25;
     measurementReasons.push(
       "Scale or body-weight data may be affected by measurement noise or temporary water shifts."
     );
   }
 
-  if (confidenceFlags.includes("weight_trend_requires_interpretation")) {
-    measurementScore -= 0.15;
+  if (interpretationFlags.includes("trend_requires_interpretation")) {
     measurementReasons.push(
-      "Weight trend requires interpretation before escalation."
+      "Weight trend still requires interpretation, even if confidence is otherwise acceptable."
     );
   }
 
-  if (confidenceFlags.includes("scale_noise_possible")) {
+  if (confidenceFlags.includes("scale_noise_high")) {
     measurementScore -= 0.15;
     measurementReasons.push(
       "Short-term scale noise is possible."
@@ -88,9 +82,8 @@ export function buildConfidenceProfile(diagnosis) {
   const intakeReasons = [];
 
   if (
+    signalProfile.dataQualityLow ||
     hasAny(activatedNodeIds, [
-      "calorie_tracking_accuracy",
-      "energy_intake_estimate",
       "weekend_adherence_gap",
       "liquid_calorie_exposure"
     ])
@@ -101,7 +94,7 @@ export function buildConfidenceProfile(diagnosis) {
     );
   }
 
-  if (confidenceFlags.includes("calorie_tracking_confidence_low")) {
+  if (confidenceFlags.includes("data_quality_low")) {
     intakeScore -= 0.2;
     intakeReasons.push(
       "Calorie tracking confidence is low."
@@ -200,12 +193,10 @@ export function buildConfidenceProfile(diagnosis) {
 
   if (
     primaryStrategy === "strategy_activity_increase" &&
-    hasAny(activatedNodeIds, [
-      "sleep_quality",
-      "diet_fatigue_risk",
-      "recovery_risk_level",
-      "constraint_low_recovery_capacity"
-    ])
+    (
+      signalProfile.recoveryBottleneck ||
+      signalProfile.dietFatigueLikely
+    )
   ) {
     strategyScore -= 0.2;
     strategyReasons.push(

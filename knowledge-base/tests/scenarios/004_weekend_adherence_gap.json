@@ -15,15 +15,16 @@
   },
   "expected": {
     "primaryIssue": "weekend_deficit_erosion",
-    "recommendationMode": "recommendation_mode_monitor_only",
-    "primaryStrategy": "strategy_monitoring_confidence",
+    "recommendationMode": "recommendation_mode_standard",
+    "primaryStrategy": "strategy_habit_environment_design",
     "shouldInclude": [
       "weekend_adherence_gap",
       "liquid_calorie_exposure",
       "strategy_habit_environment_design"
     ],
     "shouldAvoid": [
-      "strategy_medical_review"
+      "strategy_medical_review",
+      "strategy_monitoring_confidence"
     ]
   }
 }

@@ -46,8 +46,12 @@ export function extractLegacyKnowledgeSignals(inputs = {}) {
   }
 
   if (
-    inputs.sleepQuality === "low" ||
-    inputs.stressLoad === "high"
+    (inputs.sleepQuality === "low" || inputs.stressLoad === "high") &&
+    (
+      inputs.scaleSpike === true ||
+      inputs.scaleWeightVariability === "high" ||
+      inputs.trainingSoreness === "high"
+    )
   ) {
     signals.push(
       signal(
@@ -65,7 +69,9 @@ export function extractLegacyKnowledgeSignals(inputs = {}) {
     inputs.weightTrend === "stable" &&
     inputs.calorieTrackingAccuracy === "high" &&
     inputs.adherenceConsistency === "high" &&
-    inputs.scaleWeightVariability !== "high"
+    inputs.scaleWeightVariability !== "high" &&
+    inputs.stepCountConsistency !== "low" &&
+    inputs.sedentaryTime !== "high"
   ) {
     signals.push(
       signal(

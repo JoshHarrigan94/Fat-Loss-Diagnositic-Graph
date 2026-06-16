@@ -28,12 +28,19 @@ function getDiagnosisCoverage(diagnosis) {
     ...diagnosis.activatedNodeIds,
     ...diagnosis.likelyIssues,
     ...diagnosis.confidenceFlags,
+    ...(diagnosis.interpretationFlags || []),
     ...diagnosis.riskFlags,
     ...diagnosis.contraindications,
     diagnosis.primaryStrategy,
     ...diagnosis.secondaryStrategies,
-    ...diagnosis.delayedStrategies.map(item => item.id),
-    ...diagnosis.blockedStrategies.map(item => item.id),
+    diagnosis.recommendationMode
+  ].filter(Boolean);
+}
+
+function getActiveRecommendationCoverage(diagnosis) {
+  return [
+    diagnosis.primaryStrategy,
+    ...diagnosis.secondaryStrategies,
     diagnosis.recommendationMode
   ].filter(Boolean);
 }
@@ -41,6 +48,7 @@ function getDiagnosisCoverage(diagnosis) {
 function evaluateScenario(scenario) {
   const diagnosis = diagnoseCase(scenario.case);
   const coverage = getDiagnosisCoverage(diagnosis);
+  const activeCoverage = getActiveRecommendationCoverage(diagnosis);
   const expected = scenario.expected;
 
   const failures = [];
@@ -71,7 +79,14 @@ function evaluateScenario(scenario) {
   }
 
   const missingIncludes = (expected.shouldInclude || []).filter(
-    item => !coverage.includes(item)
+    item => {
+      const targetCoverage =
+        item.startsWith("strategy_") || item.startsWith("recommendation_mode_")
+          ? activeCoverage
+          : coverage;
+
+      return !targetCoverage.includes(item);
+    }
   );
 
   if (missingIncludes.length) {
@@ -79,7 +94,14 @@ function evaluateScenario(scenario) {
   }
 
   const unexpectedAvoids = (expected.shouldAvoid || []).filter(
-    item => coverage.includes(item)
+    item => {
+      const targetCoverage =
+        item.startsWith("strategy_") || item.startsWith("recommendation_mode_")
+          ? activeCoverage
+          : coverage;
+
+      return targetCoverage.includes(item);
+    }
   );
 
   if (unexpectedAvoids.length) {

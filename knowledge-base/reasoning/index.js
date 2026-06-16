@@ -28,6 +28,11 @@ export {
 } from "./hypothesisGenerator.js";
 
 export {
+  classifyDiagnosisState,
+  chooseRecommendationMode
+} from "./diagnosticContract.js";
+
+export {
   extractAnalyticsSignals
 } from "./signalExtractors/index.js";
 

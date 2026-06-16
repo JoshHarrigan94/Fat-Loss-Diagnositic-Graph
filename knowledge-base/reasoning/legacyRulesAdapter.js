@@ -25,7 +25,9 @@ export function extractLegacyRuleSignals(inputs = {}) {
     inputs.weightTrend === "stable" &&
     inputs.scaleWeightVariability === "low" &&
     inputs.calorieTrackingAccuracy === "high" &&
-    inputs.adherenceConsistency === "high"
+    inputs.adherenceConsistency === "high" &&
+    inputs.stepCountConsistency !== "low" &&
+    inputs.sedentaryTime !== "high"
   ) {
     signals.push(
       ruleSignal(
@@ -67,18 +69,27 @@ export function extractLegacyRuleSignals(inputs = {}) {
    */
   if (
     inputs.calorieTrackingAccuracy === "low" ||
-    inputs.missedLogs === true ||
-    inputs.weekendAdherenceGap === true
+    inputs.missedLogs === true
   ) {
     signals.push(
       ruleSignal(
         "calorie_tracking_accuracy",
-        "Rule heuristic: intake confidence is reduced by poor tracking, missed logs, or weekend drift.",
+        "Rule heuristic: intake confidence is reduced by poor tracking or missed logs.",
         "high"
       ),
       ruleSignal(
         "energy_intake_estimate",
         "Rule heuristic: actual energy intake may differ from reported intake.",
+        "high"
+      )
+    );
+  }
+
+  if (inputs.weekendAdherenceGap === true) {
+    signals.push(
+      ruleSignal(
+        "weekend_adherence_gap",
+        "Rule heuristic: weekend drift is more consistent with an adherence bottleneck than with low data confidence.",
         "high"
       )
     );

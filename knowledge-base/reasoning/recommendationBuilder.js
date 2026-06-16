@@ -153,6 +153,7 @@ function buildSafetyCaveats({
 function buildMonitoringGuidance({
   recommendationMode,
   confidenceFlags = [],
+  interpretationFlags = [],
   primaryStrategy
 }) {
   const guidance = [];
@@ -163,19 +164,19 @@ function buildMonitoringGuidance({
     );
   }
 
-  if (confidenceFlags.includes("weight_trend_requires_interpretation")) {
+  if (interpretationFlags.includes("trend_requires_interpretation")) {
     guidance.push(
       "Use a rolling weight trend rather than reacting to single weigh-ins."
     );
   }
 
-  if (confidenceFlags.includes("calorie_tracking_confidence_low")) {
+  if (confidenceFlags.includes("data_quality_low")) {
     guidance.push(
       "Improve intake confidence by checking missed logs, weekends, liquid calories, snacks, oils, sauces, and restaurant meals."
     );
   }
 
-  if (confidenceFlags.includes("scale_noise_possible")) {
+  if (confidenceFlags.includes("scale_noise_high")) {
     guidance.push(
       "Interpret short-term weight changes alongside sleep, stress, soreness, sodium, digestion, and carbohydrate changes."
     );
@@ -245,8 +246,11 @@ export function buildRecommendationPackage(diagnosis) {
     secondaryStrategies = [],
     delayedStrategies = [],
     blockedStrategies = [],
+    avoidedStrategies = [],
+    contraindicatedStrategies = [],
     likelyIssues = [],
     confidenceFlags = [],
+    interpretationFlags = [],
     riskFlags = [],
     contraindications = [],
     activatedNodeIds = []
@@ -265,6 +269,7 @@ export function buildRecommendationPackage(diagnosis) {
   const monitoringGuidance = buildMonitoringGuidance({
     recommendationMode,
     confidenceFlags,
+    interpretationFlags,
     primaryStrategy
   });
 
@@ -304,9 +309,22 @@ export function buildRecommendationPackage(diagnosis) {
       reason: strategy.reason
     })),
 
+    avoided: avoidedStrategies.map(strategy => ({
+      strategy: strategy.id,
+      label: getStrategyLabel(strategy.id),
+      reason: strategy.reason
+    })),
+
+    contraindicated: contraindicatedStrategies.map(strategy => ({
+      strategy: strategy.id,
+      label: getStrategyLabel(strategy.id),
+      reason: strategy.reason
+    })),
+
     explanation: {
       likelyIssues,
       confidenceFlags,
+      interpretationFlags,
       riskFlags,
       contraindications
     },

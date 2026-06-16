@@ -17,16 +17,16 @@ export const REQUIRED_EDGE_FIELDS = [
   "source",
   "target",
   "relationship",
-  "description"
+  "strength",
+  "direction",
+  "explanation",
+  "diagnosticUse"
 ];
 
 export const OPTIONAL_EDGE_FIELDS = [
   "domain",
   "evidenceLevel",
-  "confidence",
   "populationApplicability",
-  "mechanismStrength",
-  "direction",
   "metadata"
 ];
 
@@ -48,8 +48,8 @@ export function validateEdge(edge, nodeIds = new Set()) {
     edge.relationship &&
     !isValidEdgeType(edge.relationship)
   ) {
-    errors.push(
-      `Invalid edge relationship: ${edge.relationship}`
+    warnings.push(
+      `Non-canonical edge relationship preserved for compatibility: ${edge.relationship}`
     );
   }
 
@@ -70,24 +70,6 @@ export function validateEdge(edge, nodeIds = new Set()) {
   ) {
     errors.push(
       `Missing target node reference: ${edge.target}`
-    );
-  }
-
-  if (!edge.evidenceLevel) {
-    warnings.push(
-      "Missing evidenceLevel."
-    );
-  }
-
-  if (!edge.confidence) {
-    warnings.push(
-      "Missing confidence."
-    );
-  }
-
-  if (!edge.populationApplicability) {
-    warnings.push(
-      "Missing populationApplicability."
     );
   }
 

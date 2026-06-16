@@ -16,7 +16,7 @@
   },
   "expected": {
     "primaryIssue": "diet_fatigue_risk",
-    "recommendationMode": "recommendation_mode_monitor_only",
+    "recommendationMode": "recommendation_mode_conservative",
     "primaryStrategy": "strategy_diet_break_or_maintenance",
     "shouldInclude": [
       "population_bodybuilder",

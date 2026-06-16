@@ -27,15 +27,15 @@ function priorityRank(priority) {
 
 const strategyOrder = [
   "strategy_medical_review",
-  "strategy_diet_break_or_maintenance",
-  "strategy_recovery_repair",
-  "strategy_training_adjustment",
   "strategy_monitoring_confidence",
   "strategy_calorie_adjustment",
+  "strategy_recovery_repair",
+  "strategy_diet_break_or_maintenance",
+  "strategy_habit_environment_design",
+  "strategy_activity_increase",
   "strategy_nutrition_quality",
   "strategy_appetite_management",
-  "strategy_activity_increase",
-  "strategy_habit_environment_design"
+  "strategy_training_adjustment"
 ];
 
 function strategyOrderRank(strategyId) {
@@ -83,12 +83,32 @@ export function selectStrategiesFromDiagnosis({
   activatedNodeIds = [],
   likelyIssues = [],
   confidenceFlags = [],
+  interpretationFlags = [],
   riskFlags = [],
-  contraindications = []
+  contraindications = [],
+  signalProfile = {}
 }) {
   const strategies = [];
   const delayedStrategies = [];
   const blockedStrategies = [];
+  const avoidedStrategies = [];
+  const contraindicatedStrategies = [];
+
+  const addDelayed = (id, reason) => {
+    delayedStrategies.push({ id, reason });
+  };
+
+  const addBlocked = (id, reason) => {
+    blockedStrategies.push({ id, reason });
+  };
+
+  const addAvoided = (id, reason) => {
+    avoidedStrategies.push({ id, reason });
+  };
+
+  const addContraindicated = (id, reason) => {
+    contraindicatedStrategies.push({ id, reason });
+  };
 
   /**
    * 1. Safety-first strategy selection
@@ -115,71 +135,61 @@ export function selectStrategiesFromDiagnosis({
    * 2. Contraindication-driven blocking
    */
   if (contraindications.includes("contraindication_unsupervised_fasting")) {
-    blockedStrategies.push({
-      id: "fasting_strategy",
-      reason:
-        "Unsupervised fasting is contraindicated or requires medical supervision."
-    });
+    addContraindicated(
+      "fasting_strategy",
+      "Unsupervised fasting is contraindicated or requires medical supervision."
+    );
   }
 
   if (contraindications.includes("contraindication_carbohydrate_restriction")) {
-    blockedStrategies.push({
-      id: "large_carbohydrate_restriction_strategy",
-      reason:
-        "Large carbohydrate restriction is contraindicated or requires modification."
-    });
+    addContraindicated(
+      "large_carbohydrate_restriction_strategy",
+      "Large carbohydrate restriction is contraindicated or requires modification."
+    );
   }
 
   if (contraindications.includes("contraindication_aggressive_deficit")) {
-    blockedStrategies.push({
-      id: "aggressive_deficit_strategy",
-      reason:
-        "Aggressive calorie deficit is contraindicated or requires conservative modification."
-    });
+    addContraindicated(
+      "aggressive_deficit_strategy",
+      "Aggressive calorie deficit is contraindicated or requires conservative modification."
+    );
   }
 
   if (contraindications.includes("contraindication_strict_tracking")) {
-    blockedStrategies.push({
-      id: "strict_tracking_strategy",
-      reason:
-        "Strict tracking may be psychologically unsafe in this context."
-    });
+    addContraindicated(
+      "strict_tracking_strategy",
+      "Strict tracking may be psychologically unsafe in this context."
+    );
   }
 
   /**
-   * 3. True insufficient deficit
+   * 3. Data confidence
    */
   if (
-    likelyIssues.includes("insufficient_weekly_energy_deficit") &&
-    confidenceFlags.length === 0 &&
+    signalProfile.dataQualityLow ||
+    signalProfile.scaleNoiseHigh ||
+    signalProfile.trendConfidenceLow
+  ) {
+    addStrategy(
+      strategies,
+      "strategy_monitoring_confidence",
+      "Measurement confidence or data quality is not strong enough for escalation yet.",
+      "high"
+    );
+  }
+
+  /**
+   * 4. True plateau / insufficient deficit
+   */
+  if (
+    signalProfile.truePlateauLikely &&
     riskFlags.length === 0 &&
     contraindications.length === 0
   ) {
     addStrategy(
       strategies,
       "strategy_calorie_adjustment",
-      "A true insufficient deficit is likely and confidence is adequate, so calorie adjustment may be appropriate.",
-      "high"
-    );
-  }
-
-  /**
-   * 4. Confidence and monitoring
-   */
-  if (
-    confidenceFlags.length > 0 ||
-    hasAny(activatedNodeIds, [
-      "measurement_noise_interpretation",
-      "measurement_decision_threshold",
-      "calorie_tracking_accuracy",
-      "energy_intake_estimate",
-      "activity_tracking_accuracy"
-    ])
-  ) {
-    addStrategy(
-      strategies,
-      "strategy_monitoring_confidence",
-      "Measurement, intake, or activity confidence needs improving before escalation.",
+      "A true plateau is likely with adequate confidence, so calorie adjustment can be considered.",
       "high"
     );
   }
@@ -188,6 +198,7 @@ export function selectStrategiesFromDiagnosis({
    * 5. Recovery and sleep
    */
   if (
+    signalProfile.recoveryBottleneck ||
     hasAny(activatedNodeIds, [
       "sleep_quality",
       "recovery_debt",
@@ -209,6 +220,7 @@ export function selectStrategiesFromDiagnosis({
    * 6. Diet fatigue and maintenance
    */
   if (
+    signalProfile.dietFatigueLikely ||
     hasAny(activatedNodeIds, [
       "diet_fatigue_risk",
       "diet_break_readiness",
@@ -217,18 +229,104 @@ export function selectStrategiesFromDiagnosis({
     ]) ||
     likelyIssues.includes("diet_fatigue_risk")
   ) {
+    const dietFatiguePriority =
+      hasAny(activatedNodeIds, [
+        "deficit_duration",
+        "diet_break_readiness",
+        "diet_fatigue_risk"
+      ])
+        ? "critical"
+        : "high";
+
     addStrategy(
       strategies,
       "strategy_diet_break_or_maintenance",
       "Diet fatigue or performance decline suggests reducing deficit pressure may be appropriate.",
-      "high"
+      dietFatiguePriority
     );
   }
 
   /**
-   * 7. Older adult / lean mass / training protection
+   * 7. Adherence friction
    */
   if (
+    signalProfile.adherenceFriction ||
+    likelyIssues.includes("weekend_deficit_erosion")
+  ) {
+    addStrategy(
+      strategies,
+      "strategy_habit_environment_design",
+      "Adherence friction or inconsistent execution appears to be the main bottleneck.",
+      "moderate"
+    );
+  }
+
+  /**
+   * 8. Activity
+   */
+  if (
+    signalProfile.activityBottleneck ||
+    hasAny(activatedNodeIds, [
+      "low_activity_bottleneck",
+      "sedentary_time",
+      "step_count_consistency",
+      "neat_adaptation"
+    ])
+  ) {
+    addStrategy(
+      strategies,
+      "strategy_activity_increase",
+      "Low or inconsistent activity may be limiting expenditure or metabolic health.",
+      "moderate"
+    );
+  }
+
+  /**
+   * 9. Nutrition quality and appetite
+   */
+  if (
+    signalProfile.nutritionQualityIssue ||
+    hasAny(activatedNodeIds, [
+      "nutrition_quality",
+      "protein_adequacy",
+      "fibre_adequacy",
+      "food_volume_satiety",
+      "ultra_processed_food_exposure",
+      "liquid_calorie_exposure"
+    ]) ||
+    likelyIssues.includes("hidden_liquid_calorie_intake")
+  ) {
+    addStrategy(
+      strategies,
+      "strategy_nutrition_quality",
+      "Nutrition quality or food structure may be a useful intervention lever.",
+      "moderate"
+    );
+  }
+
+  if (
+    signalProfile.appetiteIssue ||
+    hasAny(activatedNodeIds, [
+      "hunger_pressure",
+      "satiety_response",
+      "craving_intensity",
+      "reward_driven_eating",
+      "early_day_underfeeding"
+    ])
+  ) {
+    addStrategy(
+      strategies,
+      "strategy_appetite_management",
+      "Hunger, cravings, or satiety issues may be limiting adherence.",
+      "moderate"
+    );
+  }
+
+  /**
+   * 10. Older adult / lean mass / training protection
+   */
+  if (
+    signalProfile.leanMassProtection ||
     likelyIssues.includes("lean_mass_retention_priority") ||
     hasAny(activatedNodeIds, [
       "population_older_adult",
@@ -250,112 +348,28 @@ export function selectStrategiesFromDiagnosis({
     );
   }
 
-  /**
-   * 8. Nutrition quality and appetite
-   */
-  if (
-    hasAny(activatedNodeIds, [
-      "nutrition_quality",
-      "protein_adequacy",
-      "fibre_adequacy",
-      "food_volume_satiety",
-      "ultra_processed_food_exposure",
-      "liquid_calorie_exposure"
-    ]) ||
-    likelyIssues.includes("hidden_liquid_calorie_intake")
-  ) {
-    addStrategy(
-      strategies,
-      "strategy_nutrition_quality",
-      "Nutrition quality or food structure may be a useful intervention lever.",
-      "moderate"
-    );
-  }
-
-  if (
-    hasAny(activatedNodeIds, [
-      "hunger_pressure",
-      "satiety_response",
-      "craving_intensity",
-      "reward_driven_eating",
-      "early_day_underfeeding"
-    ])
-  ) {
-    addStrategy(
-      strategies,
-      "strategy_appetite_management",
-      "Hunger, cravings, or satiety issues may be limiting adherence.",
-      "moderate"
-    );
-  }
-
-  /**
-   * 9. Activity
-   */
-  if (
-    hasAny(activatedNodeIds, [
-      "low_activity_bottleneck",
-      "sedentary_time",
-      "step_count_consistency",
-      "neat_adaptation"
-    ])
-  ) {
-    addStrategy(
-      strategies,
-      "strategy_activity_increase",
-      "Low or inconsistent activity may be limiting expenditure or metabolic health.",
-      "moderate"
-    );
-  }
-
-  /**
-   * 10. Habit and environment
-   */
-  if (
-    hasAny(activatedNodeIds, [
-      "constraint_low_adherence_capacity",
-      "perceived_plan_burden",
-      "executive_load",
-      "environmental_food_exposure",
-      "lapse_recovery_skill",
-      "behavioural_friction"
-    ]) ||
-    likelyIssues.includes("weekend_deficit_erosion")
-  ) {
-    addStrategy(
-      strategies,
-      "strategy_habit_environment_design",
-      "Execution friction, environment, or adherence capacity may be the limiting factor.",
-      "moderate"
-    );
-  }
-
   const rankedStrategies = dedupeStrategies(strategies);
-
-  const primaryStrategy = rankedStrategies[0]?.id || null;
-
-  const secondaryStrategies = rankedStrategies
-    .slice(1)
-    .map(strategy => strategy.id);
 
   /**
    * Delay escalation when confidence, recovery, or safety issues are present.
    */
   if (
-    confidenceFlags.length > 0 ||
-    hasAny(activatedNodeIds, [
-      "measurement_noise_interpretation",
-      "calorie_tracking_accuracy"
-    ])
+    signalProfile.dataQualityLow ||
+    signalProfile.scaleNoiseHigh ||
+    signalProfile.trendConfidenceLow
   ) {
-    delayedStrategies.push({
-      id: "strategy_calorie_adjustment",
-      reason:
-        "Calorie adjustment should be delayed until measurement and intake confidence improve."
-    });
+    addDelayed(
+      "strategy_calorie_adjustment",
+      "Calorie adjustment should be delayed until measurement confidence and intake confidence improve."
+    );
+    addAvoided(
+      "strategy_calorie_adjustment",
+      "Do not cut calories yet while confidence is low."
+    );
   }
 
   if (
+    signalProfile.recoveryBottleneck ||
     hasAny(activatedNodeIds, [
       "recovery_risk_level",
       "constraint_low_recovery_capacity",
@@ -363,36 +377,82 @@ export function selectStrategiesFromDiagnosis({
       "diet_fatigue_risk"
     ])
   ) {
-    delayedStrategies.push({
-      id: "strategy_activity_increase",
-      reason:
-        "Activity increases should be delayed or conservative until recovery constraints are addressed."
-    });
+    addDelayed(
+      "strategy_activity_increase",
+      "Activity increases should be delayed until recovery constraints are addressed."
+    );
+    addAvoided(
+      "strategy_activity_increase",
+      "Do not add more activity load while recovery is the main bottleneck."
+    );
+  }
+
+  if (signalProfile.dietFatigueLikely) {
+    addDelayed(
+      "strategy_calorie_adjustment",
+      "Further calorie reduction should wait until diet fatigue improves or a maintenance phase is completed."
+    );
+    addAvoided(
+      "strategy_calorie_adjustment",
+      "Do not intensify the deficit while diet fatigue is the dominant problem."
+    );
   }
 
   if (
     riskFlags.length > 0 ||
     contraindications.length > 0
   ) {
-    delayedStrategies.push({
-      id: "strategy_calorie_adjustment",
-      reason:
-        "Calorie adjustment should be delayed until safety risks or contraindications are resolved."
-    });
-
-    delayedStrategies.push({
-      id: "strategy_activity_increase",
-      reason:
-        "Activity increases should be delayed or medically modified until safety risks are resolved."
-    });
+    addBlocked(
+      "strategy_calorie_adjustment",
+      "Calorie adjustment should be blocked until safety risks or contraindications are resolved."
+    );
+    addBlocked(
+      "strategy_activity_increase",
+      "Activity increases should be blocked or medically modified until safety risks are resolved."
+    );
+    addAvoided(
+      "strategy_calorie_adjustment",
+      "Standard calorie escalation is not appropriate while safety-sensitive risks are active."
+    );
+    addAvoided(
+      "strategy_activity_increase",
+      "Standard activity escalation is not appropriate while safety-sensitive risks are active."
+    );
   }
+
+  if (signalProfile.leanMassProtection) {
+    addAvoided(
+      "strategy_calorie_adjustment",
+      "Lean-mass protection should be addressed before aggressive deficit changes."
+    );
+  }
+
+  const delayedIds = new Set(delayedStrategies.map(strategy => strategy.id));
+  const blockedIds = new Set(blockedStrategies.map(strategy => strategy.id));
+  const contraindicatedIds = new Set(
+    contraindicatedStrategies.map(strategy => strategy.id)
+  );
+
+  const activeStrategies = rankedStrategies.filter(strategy =>
+    !delayedIds.has(strategy.id) &&
+    !blockedIds.has(strategy.id) &&
+    !contraindicatedIds.has(strategy.id)
+  );
+
+  const primaryStrategy = activeStrategies[0]?.id || rankedStrategies[0]?.id || null;
+
+  const secondaryStrategies = activeStrategies
+    .slice(primaryStrategy === activeStrategies[0]?.id ? 1 : 0)
+    .map(strategy => strategy.id);
 
   return {
     strategyCandidates: rankedStrategies,
     primaryStrategy,
     secondaryStrategies: unique(secondaryStrategies),
-    delayedStrategies,
-    blockedStrategies
+    delayedStrategies: dedupeStrategies(delayedStrategies),
+    blockedStrategies: dedupeStrategies(blockedStrategies),
+    avoidedStrategies: dedupeStrategies(avoidedStrategies),
+    contraindicatedStrategies: dedupeStrategies(contraindicatedStrategies)
   };
 }
 

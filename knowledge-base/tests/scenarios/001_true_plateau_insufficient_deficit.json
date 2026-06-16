@@ -24,7 +24,8 @@
     ],
     "shouldAvoid": [
       "strategy_medical_review",
-      "recommendation_mode_referral_first"
+      "recommendation_mode_referral_first",
+      "strategy_monitoring_confidence"
     ]
   }
 }

@@ -15,7 +15,7 @@
   },
   "expected": {
     "primaryIssue": "poor_sleep_recovery_constraint",
-    "recommendationMode": "recommendation_mode_monitor_only",
+    "recommendationMode": "recommendation_mode_conservative",
     "primaryStrategy": "strategy_recovery_repair",
     "shouldInclude": [
       "sleep_quality",
@@ -25,7 +25,8 @@
       "strategy_recovery_repair"
     ],
     "shouldAvoid": [
-      "strategy_activity_increase"
+      "strategy_activity_increase",
+      "strategy_calorie_adjustment"
     ]
   }
 }

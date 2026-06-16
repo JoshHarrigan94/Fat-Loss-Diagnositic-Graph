@@ -25,12 +25,19 @@ function getDiagnosisCoverage(diagnosis) {
     ...diagnosis.activatedNodeIds,
     ...diagnosis.likelyIssues,
     ...diagnosis.confidenceFlags,
+    ...(diagnosis.interpretationFlags || []),
     ...diagnosis.riskFlags,
     ...diagnosis.contraindications,
     diagnosis.primaryStrategy,
     ...diagnosis.secondaryStrategies,
-    ...diagnosis.delayedStrategies.map(item => item.id),
-    ...diagnosis.blockedStrategies.map(item => item.id),
+    diagnosis.recommendationMode
+  ].filter(Boolean);
+}
+
+function getActiveRecommendationCoverage(diagnosis) {
+  return [
+    diagnosis.primaryStrategy,
+    ...diagnosis.secondaryStrategies,
     diagnosis.recommendationMode
   ].filter(Boolean);
 }
@@ -38,6 +45,7 @@ function getDiagnosisCoverage(diagnosis) {
 function testScenario(scenario) {
   const diagnosis = diagnoseCase(scenario.case);
   const coverage = getDiagnosisCoverage(diagnosis);
+  const activeCoverage = getActiveRecommendationCoverage(diagnosis);
 
   const expected = scenario.expected;
 
@@ -55,10 +63,24 @@ function testScenario(scenario) {
       diagnosis.primaryStrategy === expected.primaryStrategy,
 
     shouldInclude:
-      (expected.shouldInclude || []).filter(item => !coverage.includes(item)),
+      (expected.shouldInclude || []).filter(item => {
+        const targetCoverage =
+          item.startsWith("strategy_") || item.startsWith("recommendation_mode_")
+            ? activeCoverage
+            : coverage;
+
+        return !targetCoverage.includes(item);
+      }),
 
     shouldAvoid:
-      (expected.shouldAvoid || []).filter(item => coverage.includes(item))
+      (expected.shouldAvoid || []).filter(item => {
+        const targetCoverage =
+          item.startsWith("strategy_") || item.startsWith("recommendation_mode_")
+            ? activeCoverage
+            : coverage;
+
+        return targetCoverage.includes(item);
+      })
   };
 
   const passed =
@@ -68,6 +90,15 @@ function testScenario(scenario) {
     checks.shouldInclude.length === 0 &&
     checks.shouldAvoid.length === 0 &&
     diagnosis.missingActivatedNodes.length === 0;
+
+  if (diagnosis.delayedStrategies.some(item =>
+    item.id === diagnosis.primaryStrategy ||
+    diagnosis.secondaryStrategies.includes(item.id)
+  )) {
+    throw new Error(
+      `Delayed strategy leaked into active strategies for scenario ${scenario.id}.`
+    );
+  }
 
   return {
     id: scenario.id,

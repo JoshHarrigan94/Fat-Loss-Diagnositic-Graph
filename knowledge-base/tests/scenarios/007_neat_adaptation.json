@@ -16,8 +16,8 @@
   },
   "expected": {
     "primaryIssue": "low_activity_bottleneck",
-    "recommendationMode": "recommendation_mode_monitor_only",
-    "primaryStrategy": "strategy_monitoring_confidence",
+    "recommendationMode": "recommendation_mode_standard",
+    "primaryStrategy": "strategy_activity_increase",
     "shouldInclude": [
       "step_count_consistency",
       "sedentary_time",
@@ -25,7 +25,8 @@
       "strategy_activity_increase"
     ],
     "shouldAvoid": [
-      "strategy_medical_review"
+      "strategy_medical_review",
+      "strategy_monitoring_confidence"
     ]
   }
 }
