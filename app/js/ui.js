@@ -1,20 +1,19 @@
+import { buildAtlasViewModel } from "../../graph/atlasAdapter.js";
+import { attachNeighborMetadata, renderAtlasScene } from "../../graph/atlasRenderer.js";
 import { downloadMarkdownReport } from "../../reports/downloadReport.js";
-import { renderInteractiveGraphExplorer } from "../../graph/interactiveGraphRenderer.js";
 import { getTodayDateString } from "./dataEntry.js";
-import { renderBarChart, renderLineChart } from "./charts.js";
+import { renderLineChart } from "./charts.js";
 
 const APP_PAGES = [
-  { id: "home", label: "Home" },
-  { id: "explain", label: "Explain" },
-  { id: "plan", label: "Plan" },
-  { id: "history", label: "History" },
-  { id: "body-map", label: "Body Map" },
-  { id: "graph", label: "Graph" }
+  { id: "diagnostic", label: "Diagnostic View" },
+  { id: "atlas", label: "Atlas View" },
+  { id: "pathway", label: "Pathway View" }
 ];
 
 const uiState = {
-  currentPage: "home",
-  selectedBodyMapNodeId: null
+  currentPage: "diagnostic",
+  selectedAtlasNodeId: null,
+  selectedPathwayIndex: 0
 };
 
 export function renderDashboard(result, actions = {}) {
@@ -22,29 +21,55 @@ export function renderDashboard(result, actions = {}) {
   if (!root) return;
 
   const diagnosis = result.diagnosisRaw || {};
-  const bodyMap = buildBodyMapModel(result, diagnosis);
+  const diagnosticAtlas = buildModel(result, diagnosis, "diagnostic");
+  const atlasView = buildModel(result, diagnosis, "atlas");
+  const pathwayView = buildModel(result, diagnosis, "pathway");
   const currentPage = APP_PAGES.some(page => page.id === uiState.currentPage)
     ? uiState.currentPage
-    : "home";
-
-  if (!bodyMap.nodes.some(node => node.id === uiState.selectedBodyMapNodeId)) {
-    uiState.selectedBodyMapNodeId = bodyMap.nodes[0]?.id || null;
-  }
+    : "diagnostic";
 
   root.innerHTML = `
-    <section class="shell app-shell">
+    <section class="shell atlas-app-shell">
       ${renderAppHeader(result, diagnosis)}
-      <main class="page-shell">
-        ${renderPage(currentPage, result, diagnosis, bodyMap)}
+      <main class="atlas-page-shell">
+        ${renderPage(currentPage, result, diagnosis, {
+          diagnosticAtlas,
+          atlasView,
+          pathwayView
+        })}
       </main>
       ${renderBottomNav(currentPage)}
     </section>
   `;
 
-  bindEvents(actions, result, bodyMap);
+  bindEvents(actions, result, {
+    diagnosticAtlas,
+    atlasView,
+    pathwayView
+  });
 }
 
-function bindEvents(actions, result, bodyMap) {
+function buildModel(result, diagnosis, mode) {
+  const model = buildAtlasViewModel({
+    graph: result.graph,
+    diagnosis,
+    mode,
+    selectedNodeId: uiState.selectedAtlasNodeId,
+    selectedPathwayIndex: uiState.selectedPathwayIndex
+  });
+
+  if (!uiState.selectedAtlasNodeId && model.selectedNode) {
+    uiState.selectedAtlasNodeId = model.selectedNode.id;
+  }
+
+  if (uiState.selectedAtlasNodeId && !model.nodes.some(node => node.id === uiState.selectedAtlasNodeId)) {
+    uiState.selectedAtlasNodeId = model.selectedNode?.id || null;
+  }
+
+  return attachNeighborMetadata(model);
+}
+
+function bindEvents(actions, result, models) {
   const upload = document.querySelector("#csv-upload");
   const download = document.querySelector("#download-report");
   const exportCsv = document.querySelector("#export-csv");
@@ -87,7 +112,7 @@ function bindEvents(actions, result, bodyMap) {
     button.addEventListener("click", () => {
       const payload = JSON.parse(button.getAttribute("data-edit-row"));
       fillEntryForm(payload);
-      uiState.currentPage = "home";
+      uiState.currentPage = "diagnostic";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
@@ -100,38 +125,117 @@ function bindEvents(actions, result, bodyMap) {
     });
   });
 
-  document.querySelectorAll("[data-node-id]").forEach(button => {
+  document.querySelectorAll("[data-pathway-index]").forEach(button => {
     button.addEventListener("click", () => {
-      uiState.selectedBodyMapNodeId = button.getAttribute("data-node-id");
-      if (bodyMap.nodes.some(node => node.id === uiState.selectedBodyMapNodeId)) {
-        renderDashboard(result, actions);
-      }
+      uiState.selectedPathwayIndex = Number(button.getAttribute("data-pathway-index")) || 0;
+      const pathwayNode = models.pathwayView.pathways[uiState.selectedPathwayIndex]?.nodeIds?.[0];
+      if (pathwayNode) uiState.selectedAtlasNodeId = pathwayNode;
+      renderDashboard(result, actions);
+    });
+  });
+
+  bindAtlasHover();
+
+  document.querySelectorAll("[data-atlas-node]").forEach(node => {
+    node.addEventListener("click", () => {
+      uiState.selectedAtlasNodeId = node.getAttribute("data-atlas-node");
+      renderDashboard(result, actions);
     });
   });
 }
 
+function bindAtlasHover() {
+  document.querySelectorAll("[data-atlas-root]").forEach(root => {
+    const note = root.parentElement?.querySelector("[data-atlas-hover-note]");
+
+    root.querySelectorAll("[data-atlas-node]").forEach(node => {
+      node.addEventListener("mouseenter", () => {
+        const nodeId = node.getAttribute("data-atlas-node");
+        applyAtlasHover(root, nodeId);
+        if (note) note.textContent = node.getAttribute("data-atlas-summary") || "";
+      });
+
+      node.addEventListener("mouseleave", () => {
+        clearAtlasHover(root);
+        if (note) note.textContent = note.getAttribute("data-default-note") || note.textContent;
+      });
+    });
+  });
+}
+
+function applyAtlasHover(root, nodeId) {
+  const directNodes = new Set([nodeId]);
+
+  root.querySelectorAll("[data-edge-source]").forEach(edge => {
+    const source = edge.getAttribute("data-edge-source");
+    const target = edge.getAttribute("data-edge-target");
+    const isDirect = source === nodeId || target === nodeId;
+    edge.classList.toggle("is-hover-direct", isDirect);
+    edge.classList.toggle("is-faded", !isDirect);
+
+    if (isDirect) {
+      directNodes.add(source);
+      directNodes.add(target);
+    }
+  });
+
+  root.querySelectorAll("[data-atlas-node]").forEach(node => {
+    const currentId = node.getAttribute("data-atlas-node");
+    node.classList.toggle("is-hover-direct", directNodes.has(currentId));
+    node.classList.toggle("is-faded", !directNodes.has(currentId));
+  });
+}
+
+function clearAtlasHover(root) {
+  root.querySelectorAll(".is-hover-direct, .is-faded").forEach(node => {
+    node.classList.remove("is-hover-direct", "is-faded");
+  });
+}
+
+function renderPage(currentPage, result, diagnosis, models) {
+  switch (currentPage) {
+    case "atlas":
+      return renderAtlasPage(result, diagnosis, models.atlasView);
+    case "pathway":
+      return renderPathwayPage(result, diagnosis, models.pathwayView);
+    case "diagnostic":
+    default:
+      return renderDiagnosticPage(result, diagnosis, models.diagnosticAtlas);
+  }
+}
+
 function renderAppHeader(result, diagnosis) {
   const confidence = diagnosis.confidenceProfile?.overall;
-  const mode = diagnosis.recommendationPackage?.modeLabel || formatLabel(diagnosis.recommendationMode);
+  const dominantSystems = getDominantSystems(buildAtlasViewModel({
+    graph: result.graph,
+    diagnosis,
+    mode: "diagnostic",
+    selectedNodeId: uiState.selectedAtlasNodeId,
+    selectedPathwayIndex: uiState.selectedPathwayIndex
+  }));
 
   return `
-    <header class="app-header panel">
-      <div>
-        <p class="eyebrow">Fat Loss Intelligence</p>
-        <h1>Confidence-centred fat-loss decision support</h1>
+    <header class="app-header atlas-header">
+      <div class="atlas-title-block">
+        <p class="eyebrow">Fat Loss Diagnostic Atlas</p>
+        <h1>A living map of the human fat-loss system.</h1>
         <p class="summary">
-          The graph stays responsible for the diagnosis. The app keeps the answer simple: what is happening, why, what to do next, and whether the current read is trustworthy.
+          The diagnostic engine stays intact underneath. What changes here is the language: outcomes, systems, and inputs arranged like a physiological atlas instead of a graph application.
         </p>
       </div>
 
-      <div class="header-actions">
-        <article class="header-status-card">
+      <div class="atlas-header-meta">
+        <article class="atlas-meta-card">
+          <span>${escapeHtml(result.report?.diagnosis?.title || "Diagnostic read")}</span>
+          <p>Current diagnostic state</p>
+        </article>
+        <article class="atlas-meta-card">
           <span>${escapeHtml(confidence?.label || `${result.report?.diagnosis?.confidence || "N/A"}%`)}</span>
           <p>Confidence</p>
         </article>
-        <article class="header-status-card">
-          <span>${escapeHtml(mode || "Monitoring")}</span>
-          <p>Recommendation mode</p>
+        <article class="atlas-meta-card">
+          <span>${escapeHtml(dominantSystems.join(" · ") || "Systems")}</span>
+          <p>Dominant pathways</p>
         </article>
         <button id="download-report" class="secondary-button">Download report</button>
       </div>
@@ -139,112 +243,88 @@ function renderAppHeader(result, diagnosis) {
   `;
 }
 
-function renderPage(currentPage, result, diagnosis, bodyMap) {
-  switch (currentPage) {
-    case "explain":
-      return renderExplainPage(result, diagnosis);
-    case "plan":
-      return renderPlanPage(result, diagnosis);
-    case "history":
-      return renderHistoryPage(result, diagnosis);
-    case "body-map":
-      return renderBodyMapPage(result, diagnosis, bodyMap);
-    case "graph":
-      return renderGraphPage(result);
-    case "home":
-    default:
-      return renderHomePage(result, diagnosis);
-  }
-}
-
-function renderHomePage(result, diagnosis) {
-  const { report, chartData, entryErrors, entrySuccess, importSummary, importWarnings, rawRows } = result;
-  const latestRow = getLatestRow(rawRows);
+function renderDiagnosticPage(result, diagnosis, model) {
   const primary = diagnosis.recommendationPackage?.primary;
-  const confidence = diagnosis.confidenceProfile?.overall;
-  const story = getPrimaryStory(result, diagnosis);
+  const dominantSystems = getDominantSystems(model);
+  const latestRow = getLatestRow(result.rawRows);
 
   return `
     <section class="page-flow">
-      <section class="confidence-hero panel">
-        <div>
-          <p class="eyebrow">What is happening?</p>
-          <h2>${escapeHtml(report?.diagnosis?.title || "No diagnosis available yet")}</h2>
-          <p class="summary">${escapeHtml(report?.diagnosis?.summary || "Add data to generate a diagnosis.")}</p>
-          <div class="hero-tags">
-            ${tagChip(`Confidence: ${confidence?.label || `${report?.diagnosis?.confidence || "N/A"}%`}`)}
-            ${tagChip(`Mode: ${diagnosis.recommendationPackage?.modeLabel || formatLabel(diagnosis.recommendationMode)}`)}
-            ${tagChip(`Rows: ${rawRows?.length || 0}`)}
-          </div>
-        </div>
+      <section class="atlas-hero-grid">
+        <article class="atlas-narrative-panel">
+          <p class="eyebrow">Diagnostic View</p>
+          <h2>${escapeHtml(result.report?.diagnosis?.title || "No diagnosis available yet")}</h2>
+          <p class="summary">${escapeHtml(result.report?.diagnosis?.summary || "Add data to generate a physiological read.")}</p>
 
-        <div class="confidence-meter">
-          <strong>${report?.diagnosis?.confidence ?? "N/A"}%</strong>
-          <span>Can I trust this?</span>
-          <p>${escapeHtml(confidence?.reasons?.[0] || "Confidence will strengthen as trend, adherence, and risk signals line up.")}</p>
-        </div>
+          <div class="atlas-chip-row">
+            ${dominantSystems.map(system => atlasChip(system)).join("")}
+          </div>
+
+          <div class="atlas-reading-panel">
+            <p class="eyebrow">What the map is saying</p>
+            <p>${escapeHtml(model.caption)}</p>
+          </div>
+
+          <div class="atlas-recommendation-band">
+            <div>
+              <p class="eyebrow">Current recommendation</p>
+              <h3>${escapeHtml(primary?.label || "No active recommendation")}</h3>
+              <p>${escapeHtml(primary?.message || result.report?.recommendation || "No recommendation available.")}</p>
+            </div>
+            <button class="primary-button" data-page="pathway">Open pathway view</button>
+          </div>
+        </article>
+
+        <article class="atlas-mini-panel">
+          <div class="section-title">
+            <h2>Diagnostic atlas overlay</h2>
+            <span>Why the weight trend looks this way</span>
+          </div>
+          ${renderAtlasScene(model, { interactive: false, compact: true })}
+        </article>
       </section>
 
-      <section class="page-grid page-grid-home">
-        <article class="panel">
+      <section class="atlas-info-grid">
+        <article class="panel atlas-text-panel">
           <div class="section-title">
-            <div>
-              <p class="eyebrow">Current state</p>
-              <h2>What the graph thinks is most likely</h2>
-            </div>
+            <h2>Observed state</h2>
+            <span>Current metrics</span>
           </div>
-          <p class="summary small">${escapeHtml(report?.diagnosis?.summary || "No current state summary available.")}</p>
-          <div class="mini-metrics">
-            ${statPill("Trend", formatLabel(result.weightSignal?.momentum || "unknown"))}
-            ${statPill("Observed", `${format(result.analytics?.metrics?.observedLossPerWeek)} kg/wk`)}
-            ${statPill("Expected", `${format(result.analytics?.metrics?.expectedLossPerWeek)} kg/wk`)}
-            ${statPill("Volatility", `${format(result.analytics?.metrics?.weightVolatility)} kg`)}
+          <div class="atlas-stat-grid">
+            ${atlasStat("Observed loss", `${format(result.analytics?.metrics?.observedLossPerWeek)} kg/wk`)}
+            ${atlasStat("Expected loss", `${format(result.analytics?.metrics?.expectedLossPerWeek)} kg/wk`)}
+            ${atlasStat("Weight volatility", `${format(result.analytics?.metrics?.weightVolatility)} kg`)}
+            ${atlasStat("Latest weight", latestRow ? `${format(latestRow.bodyweight_kg)} kg` : "N/A")}
           </div>
         </article>
 
-        <article class="panel recommendation-card-surface">
+        <article class="panel atlas-text-panel">
           <div class="section-title">
-            <div>
-              <p class="eyebrow">What should I do next?</p>
-              <h2>${escapeHtml(primary?.label || "No active recommendation")}</h2>
-            </div>
+            <h2>Evidence in play</h2>
+            <span>Signals behind the read</span>
           </div>
-          <p class="summary small">${escapeHtml(primary?.message || report?.recommendation || "No recommendation available.")}</p>
-          <div class="cta-row">
-            <button class="primary-button" data-page="plan">Open plan</button>
-            <button class="secondary-button" data-page="explain">See reasoning</button>
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="section-title">
-            <div>
-              <p class="eyebrow">Why is it happening?</p>
-              <h2>Body story</h2>
-            </div>
-          </div>
-          <p class="story-line">${escapeHtml(story.title)}</p>
-          <p class="summary small">${escapeHtml(story.summary)}</p>
-          <ul class="evidence-list compact-list">
-            ${story.points.length ? story.points.map(point => `<li>${escapeHtml(point)}</li>`).join("") : "<li>No supporting signals available yet.</li>"}
+          <ul class="evidence-list">
+            ${(result.report?.evidence || []).length
+              ? result.report.evidence.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
+              : "<li>No evidence items available.</li>"}
           </ul>
         </article>
       </section>
 
-      <section class="panel">
+      <section class="panel atlas-trend-panel">
         <div class="section-title">
           <div>
-            <p class="eyebrow">Scale context</p>
-            <h2>Weight trend</h2>
+            <p class="eyebrow">Trend context</p>
+            <h2>Scale behaviour over time</h2>
           </div>
-          <button class="secondary-button" data-page="history">View history</button>
+          <button class="secondary-button" data-page="atlas">Open atlas</button>
         </div>
         ${
-          chartData?.weightTrend?.length
+          result.chartData?.weightTrend?.length
             ? renderLineChart({
                 title: "Weight trend",
-                subtitle: "Daily bodyweight with the smoothing layer the engine uses to avoid overreacting.",
-                data: chartData.weightTrend,
+                subtitle: "Daily bodyweight with the smoothing layer used by the diagnostic engine.",
+                data: result.chartData.weightTrend,
                 yKey: "weight",
                 secondaryYKey: "rollingWeight",
                 yLabel: "Daily weight",
@@ -255,358 +335,153 @@ function renderHomePage(result, diagnosis) {
         }
       </section>
 
-      <section class="panel">
+      <section class="panel atlas-checkin-panel">
         <div class="section-title">
           <div>
             <p class="eyebrow">Check-in</p>
-            <h2>Load, update, or correct the current data</h2>
+            <h2>Update the live physiological map</h2>
           </div>
-          <span>App flow stays connected to the live dashboard</span>
+          <span>Static app, live diagnosis flow</span>
         </div>
-        ${renderCheckInSummary(importSummary, importWarnings, latestRow)}
-        ${renderManualEntryPanel(entryErrors, entrySuccess)}
-        ${renderRecentEntries(rawRows)}
-      </section>
-    </section>
-  `;
-}
-
-function renderExplainPage(result, diagnosis) {
-  const confidence = diagnosis.confidenceProfile || {};
-  const strongest = result.knowledgeSummary?.strongestDomain;
-  const alternatives = (result.competingExplanations || []).slice(1, 4);
-
-  return `
-    <section class="page-flow">
-      <section class="page-intro">
-        <p class="eyebrow">Explain</p>
-        <h2>Why the graph reached this conclusion</h2>
-        <p class="summary">The engine should stay legible. This page exposes the evidence, pathway, and uncertainty without forcing you through raw ontology internals.</p>
-      </section>
-
-      <section class="page-grid">
-        <article class="panel">
-          <div class="section-title">
-            <h2>Diagnostic summary</h2>
-            <span>${escapeHtml(result.report?.diagnosis?.title || "No diagnosis")}</span>
-          </div>
-          <p class="summary small">${escapeHtml(result.report?.diagnosis?.summary || "No summary available.")}</p>
-          ${strongest ? `<p class="summary small">Strongest domain: ${escapeHtml(strongest.title)}.</p>` : ""}
-        </article>
-
-        <article class="panel">
-          <div class="section-title">
-            <h2>Evidence strength</h2>
-            <span>${escapeHtml(confidence.overall?.label || "Not scored")}</span>
-          </div>
-          <div class="signal-stack">
-            ${confidenceCard("Overall", confidence.overall)}
-            ${confidenceCard("Measurement", confidence.measurement)}
-            ${confidenceCard("Intake", confidence.intake)}
-            ${confidenceCard("Risk", confidence.risk)}
-            ${confidenceCard("Strategy", confidence.strategy)}
-          </div>
-        </article>
-      </section>
-
-      <section class="page-grid">
-        <article class="panel">
-          <div class="section-title">
-            <h2>Evidence used</h2>
-            <span>${result.report?.evidence?.length || 0} signals</span>
-          </div>
-          <ul class="evidence-list">
-            ${(result.report?.evidence || []).length
-              ? result.report.evidence.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
-              : "<li>No evidence items available.</li>"}
-          </ul>
-        </article>
-
-        <article class="panel">
-          <div class="section-title">
-            <h2>Reasoning pathway</h2>
-            <span>Top routes</span>
-          </div>
-          <ul class="path-list">
-            ${(result.rankedExplanationChains || []).length
-              ? result.rankedExplanationChains
-                  .slice(0, 5)
-                  .map(chain => `<li>${escapeHtml(chain.chain)}</li>`)
-                  .join("")
-              : "<li>No ranked explanation chains available.</li>"}
-          </ul>
-        </article>
-      </section>
-
-      <section class="page-grid">
-        <article class="panel">
-          <div class="section-title">
-            <h2>Alternative explanations</h2>
-            <span>Competing hypotheses</span>
-          </div>
-          <div class="explanation-list">
-            ${alternatives.length
-              ? alternatives
-                  .map(
-                    item => `
-                      <article class="explanation-card compact-explanation-card">
-                        <div>
-                          <p class="eyebrow">Rank ${item.rank}</p>
-                          <h3>${escapeHtml(item.title)}</h3>
-                          <p>${escapeHtml(item.explanation)}</p>
-                        </div>
-                        <div class="score-stack">
-                          <span>${item.combinedScore}</span>
-                          <small>score</small>
-                        </div>
-                      </article>
-                    `
-                  )
-                  .join("")
-              : "<p class='summary small'>No alternative explanations available.</p>"}
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="section-title">
-            <h2>Confidence notes</h2>
-            <span>Trust context</span>
-          </div>
-          <ul class="evidence-list">
-            ${(confidence.overall?.reasons || []).length
-              ? confidence.overall.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join("")
-              : "<li>No confidence notes available.</li>"}
-          </ul>
-        </article>
-      </section>
-    </section>
-  `;
-}
-
-function renderPlanPage(result, diagnosis) {
-  const recommendation = diagnosis.recommendationPackage || {};
-  const latestRow = getLatestRow(result.rawRows);
-  const delayed = recommendation.delayedStrategies || diagnosis.delayedStrategies || [];
-  const blocked = recommendation.blockedStrategies || diagnosis.blockedStrategies || [];
-  const avoided = recommendation.avoidedStrategies || diagnosis.avoidedStrategies || [];
-  const contraindicated = recommendation.contraindicatedStrategies || diagnosis.contraindicatedStrategies || [];
-
-  return `
-    <section class="page-flow">
-      <section class="page-intro">
-        <p class="eyebrow">Plan</p>
-        <h2>What to do next and why this comes first</h2>
-        <p class="summary">Only active guidance appears as the current plan. Delayed or blocked strategies stay visible as context, not as live instructions.</p>
-      </section>
-
-      <section class="page-grid">
-        <article class="panel recommendation-card-surface">
-          <div class="section-title">
-            <h2>Current recommendation</h2>
-            <span>${escapeHtml(recommendation.modeLabel || formatLabel(diagnosis.recommendationMode))}</span>
-          </div>
-          <h3 class="plan-headline">${escapeHtml(recommendation.primary?.label || "No active strategy")}</h3>
-          <p class="summary small">${escapeHtml(recommendation.primary?.message || result.report?.recommendation || "No recommendation available.")}</p>
-        </article>
-
-        <article class="panel">
-          <div class="section-title">
-            <h2>Why this recommendation</h2>
-            <span>Graph rationale</span>
-          </div>
-          <p class="summary small">${escapeHtml(result.interventionExplanation?.summary || result.graphReasoningSummary?.narrative || "No recommendation rationale available.")}</p>
-          <ul class="evidence-list">
-            ${(recommendation.tacticalLevers || []).length
-              ? recommendation.tacticalLevers.map(lever => `<li><strong>${escapeHtml(lever.label)}:</strong> ${escapeHtml(lever.description)}</li>`).join("")
-              : "<li>No tactical levers specified.</li>"}
-          </ul>
-        </article>
-      </section>
-
-      <section class="page-grid">
-        <article class="panel">
-          <div class="section-title">
-            <h2>Current targets</h2>
-            <span>Latest row</span>
-          </div>
-          <div class="target-grid">
-            ${targetCard("Calories", latestRow?.calories, "kcal")}
-            ${targetCard("Protein", latestRow?.protein_g, "g")}
-            ${targetCard("Steps", latestRow?.steps, "")}
-            ${targetCard("Sleep", latestRow?.sleep_hours, "h")}
-            ${targetCard("Training load", latestRow?.training_load, "")}
-            ${targetCard("Weight", latestRow?.bodyweight_kg, "kg")}
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="section-title">
-            <h2>Review window</h2>
-            <span>When to reassess</span>
-          </div>
-          <p class="summary small">${escapeHtml(recommendation.nextReviewPoint || "Use the next meaningful run of consistent data before changing course.")}</p>
-          <div class="mini-metrics">
-            ${statPill("Rows loaded", `${result.rawRows?.length || 0}`)}
-            ${statPill("Adherence", `${format(result.adherence?.score, 0)}%`)}
-            ${statPill("Observed loss", `${format(result.analytics?.metrics?.observedLossPerWeek)} kg/wk`)}
-          </div>
-        </article>
-      </section>
-
-      <section class="page-grid">
-        <article class="panel">
-          <div class="section-title">
-            <h2>Secondary strategies</h2>
-            <span>Active support</span>
-          </div>
-          ${renderStrategyBucket(recommendation.secondaryStrategies || diagnosis.secondaryStrategies, "No active secondary strategies.")}
-        </article>
-
-        <article class="panel">
-          <div class="section-title">
-            <h2>Risk of changing course</h2>
-            <span>Do not confuse context with action</span>
-          </div>
-          ${renderStrategyGroups({
-            delayed,
-            blocked,
-            avoided,
-            contraindicated
-          })}
-        </article>
-      </section>
-    </section>
-  `;
-}
-
-function renderHistoryPage(result) {
-  return `
-    <section class="page-flow">
-      <section class="page-intro">
-        <p class="eyebrow">History</p>
-        <h2>How the diagnosis has moved over time</h2>
-        <p class="summary">This timeline keeps previous reads and recommendations legible without pretending to validate outcomes that have not happened yet.</p>
-      </section>
-
-      <section class="page-grid">
-        <article class="panel">
-          <div class="section-title">
-            <h2>Decision timeline</h2>
-            <span>${result.timelineSummary?.weeksAnalysed || 0} week(s)</span>
-          </div>
-          ${
-            result.timelineSummary?.items?.length
-              ? `<div class="timeline-list">${result.timelineSummary.items.map(renderTimelineItem).join("")}</div>`
-              : `<p class="summary small">No timeline available yet.</p>`
-          }
-        </article>
-
-        <article class="panel">
-          <div class="section-title">
-            <h2>Weekly confidence</h2>
-            <span>History view</span>
-          </div>
-          ${
-            result.chartData?.weeklyDiagnosis?.length
-              ? renderBarChart({
-                  title: "Weekly diagnosis confidence",
-                  subtitle: "Confidence by diagnostic window.",
-                  data: result.chartData.weeklyDiagnosis,
-                  labelKey: "label",
-                  valueKey: "confidence",
-                  valueSuffix: "%"
-                })
-              : `<p class="summary small">Weekly confidence history will appear after enough data is available.</p>`
-          }
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="section-title">
-          <h2>Recent entries</h2>
-          <span>${result.rawRows?.length || 0} rows</span>
-        </div>
+        ${renderCheckInSummary(result.importSummary, result.importWarnings, latestRow)}
+        ${renderManualEntryPanel(result.entryErrors, result.entrySuccess)}
         ${renderRecentEntries(result.rawRows)}
       </section>
     </section>
   `;
 }
 
-function renderBodyMapPage(result, diagnosis, bodyMap) {
-  const selectedNode = bodyMap.nodes.find(node => node.id === uiState.selectedBodyMapNodeId) || bodyMap.nodes[0] || null;
-  const nodeEdges = bodyMap.edges.filter(
-    edge => edge.source === selectedNode?.id || edge.target === selectedNode?.id
-  );
-
+function renderAtlasPage(result, diagnosis, model) {
   return `
     <section class="page-flow">
       <section class="page-intro">
-        <p class="eyebrow">Body Map</p>
-        <h2>Curated mechanism map</h2>
-        <p class="summary">This is a decision-support view of the physiology, not the raw ontology. It shows which mechanisms, relationships, and outcomes matter for the current diagnosis.</p>
+        <p class="eyebrow">Atlas View</p>
+        <h2>Physiological blueprint</h2>
+        <p class="summary">
+          The atlas turns the knowledge graph into an authored scientific plate: outcomes across the top, systems through the centre, inputs along the base, and the currently relevant pathways drawn through the structure.
+        </p>
       </section>
 
-      <section class="page-grid body-map-layout">
-        <article class="panel">
-          <div class="section-title">
-            <h2>Current mechanism pathway</h2>
-            <span>${bodyMap.edges.length} relationships</span>
-          </div>
-          <div class="body-map-rail">
-            ${bodyMap.edges.length
-              ? bodyMap.edges.map(edge => renderBodyMapEdge(edge, bodyMap.nodeIndex)).join("")
-              : "<p class='summary small'>No body-map relationships available.</p>"}
-          </div>
+      <section class="atlas-view-layout">
+        <article class="panel atlas-primary-canvas">
+          ${renderAtlasScene(model, { interactive: true })}
         </article>
 
-        <article class="panel">
-          <div class="section-title">
-            <h2>Node explorer</h2>
-            <span>${bodyMap.nodes.length} nodes</span>
-          </div>
-          <div class="node-chip-list">
-            ${bodyMap.nodes.length
-              ? bodyMap.nodes
-                  .map(
-                    node => `
-                      <button
-                        class="node-chip ${node.id === selectedNode?.id ? "active" : ""}"
-                        data-node-id="${escapeHtml(node.id)}"
-                      >
-                        ${escapeHtml(node.label)}
-                      </button>
-                    `
-                  )
-                  .join("")
-              : "<p class='summary small'>No nodes available.</p>"}
-          </div>
-
-          ${selectedNode ? renderNodeInspector(selectedNode, nodeEdges, diagnosis, result) : ""}
-        </article>
+        <aside class="panel atlas-side-panel">
+          ${renderAtlasNodePanel(model, diagnosis)}
+        </aside>
       </section>
     </section>
   `;
 }
 
-function renderGraphPage(result) {
+function renderPathwayPage(result, diagnosis, model) {
   return `
     <section class="page-flow">
       <section class="page-intro">
-        <p class="eyebrow">Knowledge Graph</p>
-        <h2>Interactive graph explorer</h2>
+        <p class="eyebrow">Pathway View</p>
+        <h2>Reasoning becoming visible</h2>
         <p class="summary">
-          This is the full interactive knowledge graph as a standalone surface. Use it when you want the raw connected map with search, category filtering, and node-level diagnostic context.
+          This view selects a likely physiological explanation and draws the pathway across the atlas like ink on paper.
         </p>
       </section>
 
-      ${renderInteractiveGraphExplorer(result.graph)}
+      <section class="atlas-pathway-controls">
+        ${model.pathways.map((pathway, index) => `
+          <button
+            class="pathway-pill ${index === uiState.selectedPathwayIndex ? "active" : ""}"
+            data-pathway-index="${index}"
+          >
+            ${escapeHtml(pathway.label)}
+          </button>
+        `).join("")}
+      </section>
+
+      <section class="atlas-view-layout">
+        <article class="panel atlas-primary-canvas">
+          ${renderAtlasScene(model, { interactive: true, pathwayMode: true })}
+        </article>
+
+        <aside class="panel atlas-side-panel">
+          <div class="atlas-pathway-copy">
+            <p class="eyebrow">Selected pathway</p>
+            <h3>${escapeHtml(model.activePathway?.label || "No pathway selected")}</h3>
+            <p>${escapeHtml(model.activePathway?.narrative || model.caption)}</p>
+          </div>
+
+          <div class="atlas-chain-panel">
+            <p class="eyebrow">Atlas chain</p>
+            <ol class="atlas-chain-list">
+              ${(model.activePathway?.nodeIds || []).map(nodeId => {
+                const node = model.nodes.find(item => item.id === nodeId);
+                return `<li>${escapeHtml(node?.label || formatLabel(nodeId))}</li>`;
+              }).join("")}
+            </ol>
+          </div>
+
+          ${renderAtlasNodePanel(model, diagnosis)}
+        </aside>
+      </section>
     </section>
+  `;
+}
+
+function renderAtlasNodePanel(model, diagnosis) {
+  const details = model.nodeDetails;
+  const primary = diagnosis.recommendationPackage?.primary;
+
+  if (!details) {
+    return `
+      <div class="atlas-node-panel-empty">
+        <p>Select a node to inspect its physiology, relationships, and intervention relevance.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="atlas-node-panel">
+      <p class="eyebrow">Atlas annotation</p>
+      <h3>${escapeHtml(details.label)}</h3>
+      <p>${escapeHtml(details.description)}</p>
+
+      <section class="atlas-panel-block">
+        <h4>Diagnostic relevance</h4>
+        <p>${escapeHtml(details.coaching)}</p>
+      </section>
+
+      <section class="atlas-panel-block">
+        <h4>Relationships</h4>
+        <ul class="path-list compact-list">
+          ${details.relationships.length
+            ? details.relationships.map(item => `<li>${escapeHtml(item.label)}</li>`).join("")
+            : "<li>No direct atlas relationships available.</li>"}
+        </ul>
+      </section>
+
+      <section class="atlas-panel-block">
+        <h4>Interventions</h4>
+        <ul class="path-list compact-list">
+          ${details.interventions.length
+            ? details.interventions.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
+            : `<li>${escapeHtml(primary?.label || "No intervention mapping available.")}</li>`}
+        </ul>
+      </section>
+
+      <section class="atlas-panel-block">
+        <h4>Evidence traces</h4>
+        <ul class="path-list compact-list">
+          ${details.evidence.length
+            ? details.evidence.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
+            : "<li>No evidence traces attached.</li>"}
+        </ul>
+      </section>
+    </div>
   `;
 }
 
 function renderBottomNav(currentPage) {
   return `
-    <nav class="bottom-nav">
+    <nav class="bottom-nav atlas-bottom-nav">
       ${APP_PAGES.map(
         page => `
           <button class="nav-pill ${page.id === currentPage ? "active" : ""}" data-page="${page.id}">
@@ -622,19 +497,19 @@ function renderCheckInSummary(importSummary, importWarnings = [], latestRow) {
   return `
     <div class="check-in-summary-grid">
       <article class="check-in-summary-card">
-        <p class="eyebrow">Sample or saved data</p>
-        <h3>${importSummary?.totalRows || 0} rows loaded</h3>
+        <p class="eyebrow">Rows loaded</p>
+        <h3>${importSummary?.totalRows || 0}</h3>
         <p>${escapeHtml(importSummary ? `From ${importSummary.firstDate} to ${importSummary.lastDate}.` : "Demo or local rows are active.")}</p>
       </article>
 
       <article class="check-in-summary-card">
-        <p class="eyebrow">Latest day</p>
+        <p class="eyebrow">Latest check-in</p>
         <h3>${escapeHtml(latestRow?.date || "No entries")}</h3>
-        <p>${escapeHtml(latestRow ? `Weight ${format(latestRow.bodyweight_kg)} kg, calories ${format(latestRow.calories, 0)}.` : "Add a row to start diagnosis.")}</p>
+        <p>${escapeHtml(latestRow ? `Weight ${format(latestRow.bodyweight_kg)} kg · Calories ${format(latestRow.calories, 0)}.` : "Add a row to start the atlas diagnosis.")}</p>
       </article>
 
       <article class="check-in-summary-card">
-        <p class="eyebrow">Load CSV</p>
+        <p class="eyebrow">CSV import</p>
         <label class="upload-button upload-button-inline">
           Choose CSV
           <input id="csv-upload" type="file" accept=".csv,text/csv" />
@@ -668,19 +543,17 @@ function renderManualEntryPanel(entryErrors = [], entrySuccess = "") {
 
       <div class="entry-grid">
         ${inputField("date", "Date", "date", today)}
-        ${inputField("bodyweight_kg", "Bodyweight kg", "number", "", "0.1")}
+        ${inputField("bodyweight_kg", "Body Weight", "number", "", "0.1")}
         ${inputField("calories", "Calories", "number")}
-        ${inputField("protein_g", "Protein g", "number")}
-        ${inputField("carbs_g", "Carbs g", "number")}
-        ${inputField("fat_g", "Fat g", "number")}
-        ${inputField("steps", "Steps", "number")}
-        ${inputField("sleep_hours", "Sleep hours", "number", "", "0.1")}
-        ${inputField("sleep_quality", "Sleep quality 1-5", "number", "", "0.5")}
-        ${inputField("training_load", "Training load 1-10", "number", "", "0.5")}
+        ${inputField("protein_g", "Protein", "number")}
+        ${inputField("steps", "Activity / Steps", "number")}
+        ${inputField("sleep_hours", "Sleep Hours", "number", "", "0.1")}
+        ${inputField("sleep_quality", "Sleep Quality 1-5", "number", "", "0.5")}
+        ${inputField("training_load", "Training Load 1-10", "number", "", "0.5")}
       </div>
 
       <div class="entry-actions">
-        <button id="save-entry" class="primary-button">Save date</button>
+        <button id="save-entry" class="primary-button">Save check-in</button>
         <button id="export-csv" class="secondary-button">Export CSV</button>
         <button id="reset-data" class="secondary-button danger">Reset demo data</button>
       </div>
@@ -740,185 +613,6 @@ function renderDataRow(row) {
   `;
 }
 
-function renderTimelineItem(item) {
-  return `
-    <article class="timeline-item">
-      <div>
-        <p class="eyebrow">Week ${escapeHtml(item.week)}</p>
-        <h3>${escapeHtml(item.diagnosis || "No diagnosis")}</h3>
-        <p>${escapeHtml(item.dateRange || "No date range")}</p>
-      </div>
-
-      <div class="timeline-metrics">
-        <span>${escapeHtml(item.recommendation || "Recommendation not recorded")}</span>
-        <span>${escapeHtml(`${item.confidence ?? "N/A"}% confidence`)}</span>
-        <span>${escapeHtml(`${item.observedLoss ?? "N/A"} kg/wk observed`)}</span>
-      </div>
-    </article>
-  `;
-}
-
-function renderStrategyGroups(groups) {
-  return `
-    <div class="strategy-groups">
-      ${strategyBucketCard("Delayed", groups.delayed, "Conditionally available later.")}
-      ${strategyBucketCard("Blocked", groups.blocked, "Not currently available.")}
-      ${strategyBucketCard("Avoided", groups.avoided, "Not recommended in the current state.")}
-      ${strategyBucketCard("Contraindicated", groups.contraindicated, "Should not be used with the current risk profile.")}
-    </div>
-  `;
-}
-
-function strategyBucketCard(title, items, emptyMessage) {
-  return `
-    <article class="strategy-bucket-card">
-      <p class="eyebrow">${escapeHtml(title)}</p>
-      ${renderStrategyBucket(items, emptyMessage)}
-    </article>
-  `;
-}
-
-function renderStrategyBucket(items = [], emptyMessage = "No items.") {
-  if (!items?.length) {
-    return `<p class="summary small">${escapeHtml(emptyMessage)}</p>`;
-  }
-
-  return `
-    <ul class="evidence-list compact-list">
-      ${items
-        .map(
-          item => `
-            <li>
-              <strong>${escapeHtml(item.label || formatLabel(item.id || item.strategy || "strategy"))}</strong>
-              ${item.reason ? `: ${escapeHtml(item.reason)}` : ""}
-            </li>
-          `
-        )
-        .join("")}
-    </ul>
-  `;
-}
-
-function buildBodyMapModel(result, diagnosis) {
-  const subgraph = result.subgraph || { nodes: [], edges: [] };
-  const nodeIndex = new Map((subgraph.nodes || []).map(node => [node.id, node]));
-  const topRoute = diagnosis.reasoningRoutes?.find(route => route.containsDecisionNode) || diagnosis.reasoningRoutes?.[0];
-  const routeNodeIds = topRoute?.path || [];
-  const routeEdges = topRoute?.edges || [];
-  const edges = (routeEdges.length ? routeEdges : subgraph.edges || []).slice(0, 10);
-  const nodes = routeNodeIds.length
-    ? routeNodeIds.map(nodeId => nodeIndex.get(nodeId)).filter(Boolean)
-    : (subgraph.nodes || []).slice(0, 12);
-
-  return {
-    nodes: nodes.map(node => ({
-      id: node.id,
-      label: node.label || formatLabel(node.id),
-      description: node.description || node.reasoningPurpose || "No node description available.",
-      type: node.type || "unknown",
-      coaching: node.coachingImplication || node.coaching || ""
-    })),
-    edges,
-    nodeIndex: new Map(
-      nodes.map(node => [
-        node.id,
-        {
-          id: node.id,
-          label: node.label,
-          description: node.description,
-          type: node.type,
-          coaching: node.coaching
-        }
-      ])
-    )
-  };
-}
-
-function renderBodyMapEdge(edge, nodeIndex) {
-  const source = nodeIndex.get(edge.source);
-  const target = nodeIndex.get(edge.target);
-
-  return `
-    <article class="body-edge-card">
-      <button class="body-edge-node" data-node-id="${escapeHtml(edge.source)}">${escapeHtml(source?.label || formatLabel(edge.source))}</button>
-      <div class="body-edge-link">
-        <span>${escapeHtml(formatLabel(edge.relationship || "related_to"))}</span>
-        <small>${escapeHtml(edge.explanation || "Mechanistic relationship")}</small>
-      </div>
-      <button class="body-edge-node" data-node-id="${escapeHtml(edge.target)}">${escapeHtml(target?.label || formatLabel(edge.target))}</button>
-    </article>
-  `;
-}
-
-function renderNodeInspector(node, edges, diagnosis, result) {
-  return `
-    <section class="node-inspector">
-      <p class="eyebrow">Selected node</p>
-      <h3>${escapeHtml(node.label)}</h3>
-      <p class="summary small">${escapeHtml(node.description)}</p>
-      <div class="mini-metrics">
-        ${statPill("Type", formatLabel(node.type))}
-        ${node.coaching ? statPill("Diagnostic relevance", node.coaching) : ""}
-        ${diagnosis.activatedNodeIds?.includes(node.id) ? statPill("Active", "Yes") : ""}
-      </div>
-      <h4>Connected relationships</h4>
-      <ul class="path-list compact-list">
-        ${edges.length
-          ? edges
-              .map(
-                edge => `
-                  <li>
-                    ${escapeHtml(formatLabel(edge.source))} ${escapeHtml(formatLabel(edge.relationship || "related_to"))} ${escapeHtml(formatLabel(edge.target))}
-                    ${edge.diagnosticUse ? ` - ${escapeHtml(edge.diagnosticUse)}` : ""}
-                  </li>
-                `
-              )
-              .join("")
-          : "<li>No connected relationships available.</li>"}
-      </ul>
-      ${
-        result.report?.graphPaths?.length
-          ? `
-            <h4>Associated reasoning routes</h4>
-            <ul class="path-list compact-list">
-              ${result.report.graphPaths
-                .filter(path => path.toLowerCase().includes(node.label.toLowerCase()))
-                .slice(0, 3)
-                .map(path => `<li>${escapeHtml(path)}</li>`)
-                .join("") || "<li>No direct route summaries available.</li>"}
-            </ul>
-          `
-          : ""
-      }
-    </section>
-  `;
-}
-
-function getPrimaryStory(result, diagnosis) {
-  const strongest = result.knowledgeSummary?.strongestDomain;
-  const title = strongest?.title || diagnosis.primaryHypothesis?.label || result.report?.diagnosis?.title || "Current body story";
-  const summary =
-    strongest?.description ||
-    diagnosis.primaryHypothesis?.explanation ||
-    result.graphReasoningSummary?.narrative ||
-    "The graph has not produced a detailed story yet.";
-
-  const points = [
-    ...(strongest?.supporting || []),
-    ...((result.report?.evidence || []).slice(0, 3))
-  ]
-    .filter(Boolean)
-    .slice(0, 5)
-    .map(item => formatLabel(item));
-
-  return { title, summary, points };
-}
-
-function getLatestRow(rows = []) {
-  if (!rows?.length) return null;
-  return [...rows].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-}
-
 function inputField(name, label, type = "text", value = "", step = "1") {
   return `
     <label class="entry-field">
@@ -933,46 +627,31 @@ function inputField(name, label, type = "text", value = "", step = "1") {
   `;
 }
 
-function confidenceCard(label, confidence) {
-  if (!confidence) {
-    return `
-      <article class="confidence-detail-card">
-        <p class="eyebrow">${escapeHtml(label)}</p>
-        <strong>N/A</strong>
-        <p>No confidence score available.</p>
-      </article>
-    `;
-  }
-
+function atlasStat(label, value) {
   return `
-    <article class="confidence-detail-card">
-      <p class="eyebrow">${escapeHtml(label)}</p>
-      <strong>${escapeHtml(confidence.label || format(confidence.score * 100, 0))}</strong>
-      <p>${escapeHtml(confidence.reasons?.[0] || "Confidence rationale unavailable.")}</p>
-    </article>
-  `;
-}
-
-function targetCard(label, value, suffix) {
-  return `
-    <article class="target-card">
+    <article class="atlas-stat">
       <p>${escapeHtml(label)}</p>
-      <strong>${escapeHtml(value === undefined || value === null || Number.isNaN(Number(value)) ? "N/A" : `${format(value, suffix === "" ? 0 : 1)}${suffix ? ` ${suffix}` : ""}`)}</strong>
+      <strong>${escapeHtml(value)}</strong>
     </article>
   `;
 }
 
-function statPill(label, value) {
-  return `
-    <span class="stat-pill">
-      <strong>${escapeHtml(label)}</strong>
-      ${escapeHtml(value)}
-    </span>
-  `;
+function atlasChip(label) {
+  return `<span class="atlas-chip">${escapeHtml(label)}</span>`;
 }
 
-function tagChip(label) {
-  return `<span class="tag-chip">${escapeHtml(label)}</span>`;
+function getDominantSystems(model) {
+  const labels = model.nodes
+    .filter(node => model.activePathway?.nodeIds?.includes(node.id))
+    .map(node => node.region)
+    .filter(region => region && region !== "inputs" && region !== "outcomes");
+
+  return Array.from(new Set(labels)).slice(0, 4).map(region => formatLabel(region));
+}
+
+function getLatestRow(rows = []) {
+  if (!rows.length) return null;
+  return [...rows].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 }
 
 export function renderError(error) {
@@ -983,7 +662,7 @@ export function renderError(error) {
 
   root.innerHTML = `
     <section class="error">
-      <p class="eyebrow">Fat Loss Intelligence</p>
+      <p class="eyebrow">Fat Loss Diagnostic Atlas</p>
       <h1>Diagnostic engine failed to run</h1>
       <p>${escapeHtml(error.message)}</p>
     </section>
