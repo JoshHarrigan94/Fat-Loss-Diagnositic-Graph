@@ -1,106 +1,265 @@
 export const ATLAS_VIEWBOX = {
-  width: 1440,
-  height: 920
+  width: 1800,
+  height: 1180
 };
 
-export const ATLAS_REGIONS = {
-  outcomes: {
-    key: "outcomes",
-    label: "Outcomes",
-    color: "#55606b",
-    x: 720,
-    y: 120
+export const atlasPosterManifest = {
+  title: "FAT LOSS\nDIAGNOSTIC ATLAS",
+  subtitle: "A systems model of human fat-loss physiology",
+  leftRail: {
+    legend: [
+      "Primary system",
+      "Secondary system",
+      "Mechanism",
+      "Outcome",
+      "Input / behaviour",
+      "Strong influence",
+      "Moderate influence",
+      "Weak influence"
+    ],
+    principles: [
+      "Everything interacts.",
+      "Inputs feed systems.",
+      "Systems shape the scale.",
+      "The scale is not the whole story.",
+      "Pathways matter more than single metrics."
+    ],
+    levels: [
+      "01 Outcomes",
+      "02 Systems",
+      "03 Mechanisms",
+      "04 Inputs"
+    ],
+    quote:
+      "The map is not there to simplify physiology. It is there to make complexity readable."
   },
-  energy: {
-    key: "energy",
-    label: "Energy Balance",
-    color: "#7d6a4c",
-    x: 170,
-    y: 390
-  },
-  appetite: {
-    key: "appetite",
-    label: "Appetite Regulation",
-    color: "#8d5c4d",
-    x: 360,
-    y: 390
-  },
-  recovery: {
-    key: "recovery",
-    label: "Recovery",
-    color: "#6d7389",
-    x: 550,
-    y: 390
-  },
-  activity: {
-    key: "activity",
-    label: "Activity",
-    color: "#5c7680",
-    x: 740,
-    y: 390
-  },
-  hormones: {
-    key: "hormones",
-    label: "Hormones",
-    color: "#7f6c87",
-    x: 930,
-    y: 390
-  },
-  behaviour: {
-    key: "behaviour",
-    label: "Behaviour",
-    color: "#7d6459",
-    x: 1120,
-    y: 390
-  },
-  water: {
-    key: "water",
-    label: "Water Balance",
-    color: "#5c7b78",
-    x: 1270,
-    y: 390
-  },
-  inputs: {
-    key: "inputs",
-    label: "Inputs",
-    color: "#616161",
-    x: 720,
-    y: 720
+  rightRail: {
+    howToRead: [
+      "Outcomes sit at the top.",
+      "Domains are the major systems.",
+      "Mechanisms live inside the clusters.",
+      "Inputs feed the systems below.",
+      "Everything influences everything."
+    ],
+    influenceScale: [
+      "Stronger influence",
+      "Moderate influence",
+      "Weaker influence"
+    ],
+    timeHorizon: [
+      "Immediate (now)",
+      "Short term (days / weeks)",
+      "Medium term (months)",
+      "Long term (years)"
+    ],
+    notes: [
+      "The map is not linear.",
+      "Feedback loops exist across systems.",
+      "Scale weight is only one visible surface."
+    ]
   }
 };
 
-export const ATLAS_CANONICAL_SLOTS = [
-  { slotId: "fat-loss", label: "Fat Loss", region: "outcomes", x: 210, y: 140, candidateIds: ["fat_mass_change", "fat_mass", "expected_fat_loss"] },
-  { slotId: "weight-trend", label: "Weight Trend", region: "outcomes", x: 520, y: 140, candidateIds: ["body_weight_trend", "scale_weight", "fat_loss_outcome_confidence"] },
-  { slotId: "maintenance", label: "Weight Maintenance", region: "outcomes", x: 830, y: 140, candidateIds: ["maintenance_calories", "body_weight_trend", "intervention_strategy"] },
-  { slotId: "energy-levels", label: "Energy Levels", region: "outcomes", x: 1140, y: 140, candidateIds: ["recovery_capacity", "subjective_fatigue", "training_recovery_status"] },
-
-  { slotId: "energy-system", label: "Energy Balance", region: "energy", x: 170, y: 385, candidateIds: ["energy_balance", "weekly_energy_deficit", "energy_intake_estimate"] },
-  { slotId: "appetite-system", label: "Appetite Regulation", region: "appetite", x: 360, y: 385, candidateIds: ["appetite_regulation", "hunger_pressure", "satiety_response"] },
-  { slotId: "recovery-system", label: "Recovery", region: "recovery", x: 550, y: 385, candidateIds: ["recovery_capacity", "recovery_debt", "training_recovery_status"] },
-  { slotId: "activity-system", label: "Activity", region: "activity", x: 740, y: 385, candidateIds: ["activity_energy_expenditure", "neat_adaptation", "step_count_consistency"] },
-  { slotId: "hormones-system", label: "Hormones", region: "hormones", x: 930, y: 385, candidateIds: ["hormones_life_stage_context", "hormonal_fluid_shift", "thyroid_risk_signal"] },
-  { slotId: "behaviour-system", label: "Behaviour", region: "behaviour", x: 1120, y: 385, candidateIds: ["adherence_consistency", "calorie_tracking_accuracy", "perceived_plan_burden"] },
-  { slotId: "water-system", label: "Water Balance", region: "water", x: 1270, y: 385, candidateIds: ["water_retention", "measurement_noise", "glycogen_storage"] },
-
-  { slotId: "calories-input", label: "Calories", region: "inputs", x: 160, y: 728, candidateIds: ["energy_intake", "energy_intake_estimate"] },
-  { slotId: "protein-input", label: "Protein", region: "inputs", x: 340, y: 728, candidateIds: ["protein_adequacy"] },
-  { slotId: "steps-input", label: "Activity", region: "inputs", x: 520, y: 728, candidateIds: ["step_count_consistency", "activity_tracking_accuracy"] },
-  { slotId: "sleep-input", label: "Sleep", region: "inputs", x: 700, y: 728, candidateIds: ["sleep_quality", "sleep_duration"] },
-  { slotId: "stress-input", label: "Stress", region: "inputs", x: 880, y: 728, candidateIds: ["stress_load", "psychological_stress"] },
-  { slotId: "training-input", label: "Training", region: "inputs", x: 1060, y: 728, candidateIds: ["exercise_training", "training_recovery_status", "training_load_fatigue"] },
-  { slotId: "environment-input", label: "Environment", region: "inputs", x: 1240, y: 728, candidateIds: ["environmental_food_exposure", "routine_stability"] }
+export const atlasOutcomeManifest = [
+  {
+    slotId: "fat-loss-outcome",
+    label: "Fat Loss",
+    caption: "Stored tissue change over time",
+    candidateIds: ["fat_mass_change", "fat_mass", "expected_fat_loss"],
+    x: 420,
+    y: 122
+  },
+  {
+    slotId: "scale-outcome",
+    label: "Scale Trend",
+    caption: "Visible body-mass movement",
+    candidateIds: ["body_weight_trend", "scale_weight", "fat_loss_outcome_confidence"],
+    x: 670,
+    y: 122
+  },
+  {
+    slotId: "maintenance-outcome",
+    label: "Weight Maintenance",
+    caption: "Sustainable equilibrium",
+    candidateIds: ["maintenance_calories", "body_weight_trend"],
+    x: 920,
+    y: 122
+  },
+  {
+    slotId: "body-comp-outcome",
+    label: "Muscle Retention",
+    caption: "Protect lean tissue",
+    candidateIds: ["muscle_gain_potential", "fat_mass_change"],
+    x: 1170,
+    y: 122
+  },
+  {
+    slotId: "energy-outcome",
+    label: "Energy Levels",
+    caption: "Recovery and subjective capacity",
+    candidateIds: ["recovery_capacity", "subjective_fatigue", "training_recovery_status"],
+    x: 1420,
+    y: 122
+  }
 ];
+
+export const atlasHubManifest = [
+  {
+    id: "activity",
+    label: "ACTIVITY\nSYSTEM",
+    caption: "Movement, expenditure, NEAT",
+    color: "#5d6f8a",
+    x: 590,
+    y: 340,
+    candidateIds: ["activity_energy_expenditure", "neat_adaptation", "step_count_consistency"],
+    annotation: ["Step consistency", "NEAT drift", "Energy expenditure"],
+    icon: "◌"
+  },
+  {
+    id: "energy",
+    label: "ENERGY\nSYSTEM",
+    caption: "Intake, deficit, partitioning",
+    color: "#83674f",
+    x: 1210,
+    y: 340,
+    candidateIds: ["energy_balance", "weekly_energy_deficit", "energy_intake_estimate"],
+    annotation: ["Calorie balance", "Deficit size", "Energy partitioning"],
+    icon: "⚡"
+  },
+  {
+    id: "recovery",
+    label: "RECOVERY\nSYSTEM",
+    caption: "Sleep, stress, recovery debt",
+    color: "#7b776e",
+    x: 485,
+    y: 615,
+    candidateIds: ["recovery_capacity", "recovery_debt", "sleep_quality"],
+    annotation: ["Sleep quality", "Stress load", "Recovery debt"],
+    icon: "↺"
+  },
+  {
+    id: "water",
+    label: "WATER\nSYSTEM",
+    caption: "Masking, retention, volatility",
+    color: "#6d837c",
+    x: 1315,
+    y: 615,
+    candidateIds: ["water_retention", "measurement_noise", "glycogen_storage"],
+    annotation: ["Water retention", "Glycogen shifts", "Scale noise"],
+    icon: "◍"
+  },
+  {
+    id: "nutrition",
+    label: "NUTRITION\nSYSTEM",
+    caption: "Protein, food quality, satiety",
+    color: "#7b8a77",
+    x: 615,
+    y: 885,
+    candidateIds: ["protein_adequacy", "appetite_regulation", "hunger_pressure"],
+    annotation: ["Protein adequacy", "Appetite regulation", "Food structure"],
+    icon: "◒"
+  },
+  {
+    id: "behaviour",
+    label: "BEHAVIOUR\nSYSTEM",
+    caption: "Adherence, environment, burden",
+    color: "#876c66",
+    x: 1185,
+    y: 885,
+    candidateIds: ["adherence_consistency", "calorie_tracking_accuracy", "perceived_plan_burden"],
+    annotation: ["Adherence", "Tracking accuracy", "Plan burden"],
+    icon: "◈"
+  },
+  {
+    id: "hormonal",
+    label: "HORMONAL\nCONTEXT",
+    caption: "Life stage, fluid shifts, context",
+    color: "#80718a",
+    x: 900,
+    y: 730,
+    candidateIds: ["hormones_life_stage_context", "hormonal_fluid_shift", "thyroid_risk_signal"],
+    annotation: ["Life stage", "Fluid shifts", "Medical context"],
+    icon: "◠"
+  }
+];
+
+export const atlasInputManifest = [
+  {
+    slotId: "calories-input",
+    label: "Calories",
+    caption: "Total intake",
+    candidateIds: ["energy_intake", "energy_intake_estimate"],
+    x: 360,
+    y: 1088
+  },
+  {
+    slotId: "protein-input",
+    label: "Protein",
+    caption: "Adequacy and retention",
+    candidateIds: ["protein_adequacy"],
+    x: 560,
+    y: 1088
+  },
+  {
+    slotId: "activity-input",
+    label: "Activity",
+    caption: "Steps and movement",
+    candidateIds: ["step_count_consistency", "activity_tracking_accuracy"],
+    x: 760,
+    y: 1088
+  },
+  {
+    slotId: "sleep-input",
+    label: "Sleep",
+    caption: "Duration and quality",
+    candidateIds: ["sleep_duration", "sleep_quality"],
+    x: 960,
+    y: 1088
+  },
+  {
+    slotId: "stress-input",
+    label: "Stress",
+    caption: "External and internal load",
+    candidateIds: ["stress_load", "psychological_stress"],
+    x: 1160,
+    y: 1088
+  },
+  {
+    slotId: "training-input",
+    label: "Training",
+    caption: "Load and recovery cost",
+    candidateIds: ["exercise_training", "training_recovery_status", "training_load_fatigue"],
+    x: 1360,
+    y: 1088
+  }
+];
+
+export const atlasPathwayManifest = {
+  trackColor: "#243346",
+  pathwayHighlightColor: "#162638",
+  strokeColor: "#b7ab99"
+};
+
+const REGION_TO_HUB = {
+  energy: "energy",
+  appetite: "nutrition",
+  recovery: "recovery",
+  activity: "activity",
+  hormones: "hormonal",
+  behaviour: "behaviour",
+  water: "water",
+  outcomes: "energy",
+  inputs: "behaviour"
+};
 
 const DOMAIN_REGION_MAP = [
   { match: ["energy_balance", "glucose-insulin"], region: "energy" },
-  { match: ["appetite-satiety"], region: "appetite" },
+  { match: ["appetite-satiety", "nutrition-quality"], region: "appetite" },
   { match: ["recovery-sleep"], region: "recovery" },
   { match: ["activity-neat", "exercise-training"], region: "activity" },
   { match: ["hormones-life-stage"], region: "hormones" },
   { match: ["adherence-behaviour", "stress-psychology"], region: "behaviour" },
-  { match: ["water_scale_noise", "measurement-noise"], region: "water" },
-  { match: ["nutrition-quality"], region: "energy" }
+  { match: ["water_scale_noise", "measurement-noise"], region: "water" }
 ];
 
 const OUTCOME_TYPES = new Set([
@@ -122,16 +281,14 @@ const INPUT_TYPES = new Set([
   "intervention_domain"
 ]);
 
-const REGION_OFFSETS = {
-  energy: [[-90, -95], [85, -85], [-100, 88], [100, 74], [0, -152], [0, 146]],
-  appetite: [[-86, -92], [90, -86], [-104, 82], [96, 80], [0, -150], [0, 142]],
-  recovery: [[-88, -94], [84, -82], [-108, 84], [96, 76], [0, -150], [0, 144]],
-  activity: [[-88, -90], [88, -84], [-104, 82], [96, 78], [0, -152], [0, 144]],
-  hormones: [[-84, -92], [92, -84], [-104, 84], [94, 80], [0, -150], [0, 144]],
-  behaviour: [[-90, -92], [90, -84], [-104, 82], [96, 80], [0, -148], [0, 144]],
-  water: [[-86, -92], [90, -86], [-104, 82], [96, 78], [0, -150], [0, 146]],
-  outcomes: [[-120, 50], [0, 60], [120, 50]],
-  inputs: [[-110, -52], [0, -62], [110, -52]]
+const HUB_CLUSTER_OFFSETS = {
+  activity: [[-110, -80], [112, -74], [-124, 8], [124, 14], [-88, 94], [92, 102], [0, -138]],
+  energy: [[-116, -84], [114, -72], [-126, 10], [126, 16], [-86, 102], [94, 108], [0, -138]],
+  recovery: [[-112, -82], [108, -70], [-128, 10], [124, 14], [-86, 104], [92, 108], [0, -138]],
+  water: [[-112, -82], [110, -68], [-128, 14], [126, 18], [-86, 104], [92, 108], [0, -138]],
+  nutrition: [[-110, -76], [112, -70], [-126, 12], [124, 18], [-88, 100], [92, 102], [0, -132]],
+  behaviour: [[-110, -80], [114, -74], [-126, 10], [124, 16], [-86, 102], [92, 108], [0, -136]],
+  hormonal: [[-96, -88], [98, -88], [-112, 12], [112, 16], [-70, 96], [72, 102]]
 };
 
 export function inferAtlasRegion(node = {}) {
@@ -158,16 +315,21 @@ export function inferAtlasRegion(node = {}) {
   if (id.includes("activity") || id.includes("step") || id.includes("training")) return "activity";
   if (id.includes("horm")) return "hormones";
   if (id.includes("behav") || id.includes("adherence") || id.includes("tracking")) return "behaviour";
-  if (id.includes("appetite") || id.includes("hunger") || id.includes("satiety")) return "appetite";
+  if (id.includes("appetite") || id.includes("hunger") || id.includes("satiety") || id.includes("protein")) return "appetite";
   if (id.includes("energy") || id.includes("calorie")) return "energy";
 
   return "behaviour";
 }
 
-export function getRegionAnchor(regionKey) {
-  return ATLAS_REGIONS[regionKey] || ATLAS_REGIONS.behaviour;
+export function inferAtlasHubId(node = {}) {
+  const region = inferAtlasRegion(node);
+  return REGION_TO_HUB[region] || "behaviour";
 }
 
-export function getOffsetsForRegion(regionKey) {
-  return REGION_OFFSETS[regionKey] || REGION_OFFSETS.behaviour;
+export function getHubManifest(hubId) {
+  return atlasHubManifest.find(hub => hub.id === hubId) || atlasHubManifest[0];
+}
+
+export function getHubOffsets(hubId) {
+  return HUB_CLUSTER_OFFSETS[hubId] || HUB_CLUSTER_OFFSETS.behaviour;
 }

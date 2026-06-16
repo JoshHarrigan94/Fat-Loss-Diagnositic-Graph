@@ -1,9 +1,13 @@
 import {
-  ATLAS_CANONICAL_SLOTS,
-  ATLAS_REGIONS,
   ATLAS_VIEWBOX,
-  getOffsetsForRegion,
-  getRegionAnchor,
+  atlasHubManifest,
+  atlasInputManifest,
+  atlasOutcomeManifest,
+  atlasPathwayManifest,
+  atlasPosterManifest,
+  getHubManifest,
+  getHubOffsets,
+  inferAtlasHubId,
   inferAtlasRegion
 } from "./atlasLayout.js";
 
@@ -13,7 +17,7 @@ const PATHWAY_LIBRARY = [
     match: ["stress", "recovery", "water_retention", "masked_fat_loss"],
     label: "Stress -> Sleep -> Water Retention",
     narrative:
-      "Stress and recovery debt can drive fluid retention, making the scale look stalled even when fat loss may still be occurring.",
+      "Stress and recovery debt can increase fluid retention, making the scale look stalled even when fat loss may still be occurring.",
     nodeIds: [
       "stress_load",
       "sleep_quality",
@@ -26,9 +30,9 @@ const PATHWAY_LIBRARY = [
   {
     id: "pathway_energy_plateau",
     match: ["true_plateau", "insufficient_weekly_energy_deficit", "energy_balance"],
-    label: "Calories -> Energy Balance -> Fat Loss",
+    label: "Calories -> Energy Balance -> Scale Trend",
     narrative:
-      "When intake and expenditure no longer produce a strong enough weekly deficit, true fat loss slows even if adherence feels consistent.",
+      "When weekly intake and expenditure no longer create enough deficit, true fat-loss slows and the scale trend stabilises for real rather than by masking alone.",
     nodeIds: [
       "energy_intake",
       "energy_balance",
@@ -42,7 +46,7 @@ const PATHWAY_LIBRARY = [
     match: ["adherence", "weekend", "tracking"],
     label: "Environment -> Adherence -> Intake",
     narrative:
-      "Food environment and tracking drift can quietly erode the weekly deficit before the user experiences it as a clear plan failure.",
+      "Food environment, weekends, and tracking drift can erode the weekly deficit before the user experiences it as obvious plan failure.",
     nodeIds: [
       "environmental_food_exposure",
       "adherence_consistency",
@@ -68,18 +72,18 @@ const PATHWAY_LIBRARY = [
     ]
   },
   {
-    id: "pathway_appetite_fatigue",
-    match: ["diet_fatigue", "hunger", "burden"],
-    label: "Diet Fatigue -> Appetite -> Adherence",
+    id: "pathway_recovery_bottleneck",
+    match: ["recovery", "sleep", "fatigue"],
+    label: "Sleep -> Recovery -> Scale Distortion",
     narrative:
-      "Long or aggressive dieting can increase hunger and plan burden until adherence slips before the scale explains why.",
+      "Poor sleep and recovery pressure can distort the visible trend through fatigue, inflammation, and water shifts before calories are the right target.",
     nodeIds: [
-      "perceived_plan_burden",
-      "hunger_pressure",
-      "appetite_regulation",
-      "adherence_consistency",
-      "energy_intake",
-      "energy_balance"
+      "sleep_duration",
+      "sleep_quality",
+      "recovery_capacity",
+      "subjective_fatigue",
+      "water_retention",
+      "scale_weight"
     ]
   },
   {
@@ -111,34 +115,46 @@ export function buildAtlasViewModel({
     pathways[0] ||
     createFallbackPathway(graph);
 
-  const canonicalNodes = resolveCanonicalNodes(graph);
-  const displayNodeMap = new Map(canonicalNodes.map(node => [node.id, node]));
+  const displayNodes = new Map();
+
+  const centerNode = createCenterNode(diagnosis);
+  displayNodes.set(centerNode.id, centerNode);
+
+  atlasOutcomeManifest.forEach(slot => {
+    const node = resolveManifestNode(graph, slot, "outcome");
+    if (node) displayNodes.set(node.id, node);
+  });
+
+  atlasInputManifest.forEach(slot => {
+    const node = resolveManifestNode(graph, slot, "input");
+    if (node) displayNodes.set(node.id, node);
+  });
+
+  atlasHubManifest.forEach(hub => {
+    const node = resolveManifestNode(graph, hub, "hub");
+    if (node) displayNodes.set(node.id, node);
+  });
 
   const pathwayNodes = activePathway.nodeIds
     .map(nodeId => graph.nodeMap.get(nodeId))
     .filter(Boolean);
 
   pathwayNodes.forEach(node => {
-    if (displayNodeMap.has(node.id)) return;
-    displayNodeMap.set(node.id, createSatelliteNode(node, displayNodeMap));
+    if (displayNodes.has(node.id)) return;
+    displayNodes.set(node.id, createMechanismNode(node, displayNodes));
   });
 
-  if (mode === "atlas") {
-    const additionalNodes = gatherAtlasNodes(graph, diagnosis, displayNodeMap);
-    additionalNodes.forEach(node => {
-      if (!displayNodeMap.has(node.id)) {
-        displayNodeMap.set(node.id, createSatelliteNode(node, displayNodeMap));
-      }
+  if (mode !== "diagnostic") {
+    gatherAtlasNodes(graph, diagnosis, displayNodes).forEach(node => {
+      if (displayNodes.has(node.id)) return;
+      displayNodes.set(node.id, createMechanismNode(node, displayNodes));
     });
   }
 
-  const nodes = Array.from(displayNodeMap.values());
+  const nodes = Array.from(displayNodes.values());
   const nodeLookup = new Map(nodes.map(node => [node.id, node]));
-  const includedNodeIds = new Set(nodes.map(node => node.id));
-
-  const edges = buildVisibleEdges({
+  const edges = buildEdges({
     graph,
-    includedNodeIds,
     nodeLookup,
     activePathway,
     mode
@@ -147,86 +163,112 @@ export function buildAtlasViewModel({
   const selectedNode =
     nodeLookup.get(selectedNodeId) ||
     nodeLookup.get(activePathway.nodeIds[0]) ||
-    nodes.find(node => node.kind === "system") ||
-    nodes[0] ||
-    null;
+    centerNode;
 
   return {
     mode,
     viewBox: ATLAS_VIEWBOX,
-    sectionBands: buildSectionBands(),
+    poster: atlasPosterManifest,
+    pathwayStyle: atlasPathwayManifest,
     nodes,
     edges,
     pathways,
     activePathway,
     selectedNode,
-    nodeDetails: buildNodeDetails(graph, selectedNode),
+    nodeDetails: buildNodeDetails(graph, selectedNode, diagnosis),
     caption:
       activePathway?.narrative ||
       "The atlas shows the systems and pathways most relevant to the current fat-loss diagnosis."
   };
 }
 
-function resolveCanonicalNodes(graph) {
-  return ATLAS_CANONICAL_SLOTS.flatMap(slot => {
-    const node = slot.candidateIds
-      .map(candidateId => graph.nodeMap.get(candidateId))
-      .find(Boolean);
-
-    if (!node) return [];
-
-    return [adaptNodeForAtlas(node, {
-      x: slot.x,
-      y: slot.y,
-      region: slot.region,
-      label: slot.label,
-      kind: slot.region === "outcomes" ? "outcome" : slot.region === "inputs" ? "input" : "system"
-    })];
-  });
+function createCenterNode(diagnosis) {
+  return {
+    id: "atlas_central_state",
+    label: "FAT-LOSS\nSTATE",
+    baseLabel: "Fat-Loss State",
+    x: 900,
+    y: 560,
+    visualTier: "center",
+    region: "outcomes",
+    hubId: "energy",
+    color: "#2b2a28",
+    description:
+      diagnosis?.primaryHypothesis?.explanation ||
+      "The centre of the atlas represents the visible state the user experiences: movement, masking, and perceived progress.",
+    coaching:
+      diagnosis?.recommendationPackage?.primary?.message ||
+      "Use the surrounding systems to understand why the visible state does or does not match expected fat loss.",
+    interventions: [],
+    evidence: diagnosis?.likelyIssues || [],
+    annotation: [
+      diagnosis?.primaryHypothesis?.label || "Current diagnostic interpretation",
+      diagnosis?.confidenceProfile?.overall?.label || "Confidence profile"
+    ],
+    isSynthetic: true
+  };
 }
 
-function gatherAtlasNodes(graph, diagnosis, displayNodeMap) {
-  const ids = new Set([
-    ...(diagnosis?.activatedNodeIds || []).slice(0, 18),
-    ...(diagnosis?.likelyIssues || []),
-    ...(diagnosis?.recommendationPackage?.explanation?.likelyIssues || [])
-  ]);
+function resolveManifestNode(graph, manifest, visualTier) {
+  const source = manifest.candidateIds
+    .map(candidateId => graph.nodeMap.get(candidateId))
+    .find(Boolean);
 
-  return Array.from(ids)
-    .map(nodeId => graph.nodeMap.get(nodeId))
-    .filter(Boolean)
-    .filter(node => !displayNodeMap.has(node.id));
-}
+  if (!source) return null;
 
-function createSatelliteNode(node, displayNodeMap) {
-  const region = inferAtlasRegion(node);
-  const anchor = getRegionAnchor(region);
-  const offsets = getOffsetsForRegion(region);
-  const siblings = Array.from(displayNodeMap.values()).filter(item => item.region === region).length;
-  const offset = offsets[siblings % offsets.length];
+  const region = visualTier === "hub"
+    ? inferAtlasRegion(source)
+    : visualTier === "outcome"
+      ? "outcomes"
+      : "inputs";
 
-  return adaptNodeForAtlas(node, {
-    x: anchor.x + offset[0],
-    y: anchor.y + offset[1],
+  const hubManifest = visualTier === "hub" ? manifest : getHubManifest(inferAtlasHubId(source));
+
+  return {
+    id: source.id,
+    label: manifest.label,
+    baseLabel: source.label || manifest.label,
+    caption: manifest.caption || "",
+    x: manifest.x,
+    y: manifest.y,
+    visualTier,
     region,
-    label: node.label,
-    kind: "satellite"
-  });
+    hubId: hubManifest.id,
+    color: hubManifest.color,
+    description:
+      source.description ||
+      source.reasoningPurpose ||
+      "No atlas description available.",
+    coaching:
+      source.coachingImplication ||
+      source.reasoningPurpose ||
+      manifest.caption ||
+      "No coaching implication available.",
+    interventions: source.interventions || [],
+    evidence: source.observedBy || source.influencedBy || [],
+    annotation: manifest.annotation || [],
+    icon: manifest.icon || "",
+    type: source.type || "unknown"
+  };
 }
 
-function adaptNodeForAtlas(node, placement) {
-  const region = placement.region || inferAtlasRegion(node);
-  const palette = ATLAS_REGIONS[region] || ATLAS_REGIONS.behaviour;
+function createMechanismNode(node, displayNodes) {
+  const hubId = inferAtlasHubId(node);
+  const hub = getHubManifest(hubId);
+  const offsets = getHubOffsets(hubId);
+  const siblings = Array.from(displayNodes.values()).filter(item => item.hubId === hubId && item.visualTier === "mechanism").length;
+  const offset = offsets[siblings % offsets.length];
 
   return {
     id: node.id,
-    label: placement.label || node.label || formatLabel(node.id),
+    label: node.label || formatLabel(node.id),
     baseLabel: node.label || formatLabel(node.id),
-    x: placement.x,
-    y: placement.y,
-    region,
-    color: palette.color,
-    kind: placement.kind || "satellite",
+    x: hub.x + offset[0],
+    y: hub.y + offset[1],
+    visualTier: "mechanism",
+    region: inferAtlasRegion(node),
+    hubId,
+    color: hub.color,
     description:
       node.description ||
       node.reasoningPurpose ||
@@ -235,89 +277,165 @@ function adaptNodeForAtlas(node, placement) {
     coaching:
       node.coachingImplication ||
       node.reasoningPurpose ||
-      "Use this node to understand the mechanism behind the current diagnosis.",
+      "Use this mechanism to understand why the visible scale signal is behaving the way it is.",
     interventions: node.interventions || [],
     evidence: node.observedBy || node.influencedBy || [],
+    annotation: [],
     type: node.type || "unknown"
   };
 }
 
-function buildVisibleEdges({
+function gatherAtlasNodes(graph, diagnosis, displayNodes) {
+  const ids = new Set([
+    ...(diagnosis?.activatedNodeIds || []).slice(0, 18),
+    ...(diagnosis?.likelyIssues || []),
+    ...(diagnosis?.recommendationPackage?.explanation?.likelyIssues || []),
+    ...(diagnosis?.primaryHypothesis?.supportingEvidence || [])
+  ]);
+
+  return Array.from(ids)
+    .map(nodeId => graph.nodeMap.get(nodeId))
+    .filter(Boolean)
+    .filter(node => !displayNodes.has(node.id));
+}
+
+function buildEdges({
   graph,
-  includedNodeIds,
   nodeLookup,
   activePathway,
   mode
 }) {
-  const rendered = [];
+  const edges = [];
   const seen = new Set();
-  const pathwayPairs = new Set();
 
-  for (let index = 0; index < activePathway.nodeIds.length - 1; index += 1) {
-    pathwayPairs.add(`${activePathway.nodeIds[index]}::${activePathway.nodeIds[index + 1]}`);
-  }
-
-  graph.edges.forEach(edge => {
-    if (!includedNodeIds.has(edge.source) || !includedNodeIds.has(edge.target)) {
-      return;
-    }
-
-    if (mode === "diagnostic" && !pathwayPairs.has(`${edge.source}::${edge.target}`)) {
-      return;
-    }
-
-    const key = `${edge.source}:${edge.target}:${edge.relationship}`;
+  const addEdge = (edge) => {
+    const key = `${edge.source}:${edge.target}:${edge.relationship}:${edge.kind || "graph"}`;
     if (seen.has(key)) return;
     seen.add(key);
+    edges.push(edge);
+  };
 
-    rendered.push(adaptEdgeForAtlas(edge, nodeLookup, pathwayPairs));
+  nodeLookup.forEach(node => {
+    if (node.visualTier === "hub") {
+      addEdge(createAtlasEdge(node.id, "atlas_central_state", "converges_on", nodeLookup, false, "system"));
+    }
+
+    if (node.visualTier === "input") {
+      const hubNode = findHubNode(nodeLookup, node.hubId);
+      if (hubNode) {
+        addEdge(createAtlasEdge(node.id, hubNode.id, "feeds", nodeLookup, false, "input"));
+      }
+    }
+
+    if (node.visualTier === "outcome") {
+      addEdge(createAtlasEdge("atlas_central_state", node.id, "expresses", nodeLookup, false, "outcome"));
+    }
+
+    if (node.visualTier === "mechanism") {
+      const hubNode = findHubNode(nodeLookup, node.hubId);
+      if (hubNode) {
+        addEdge(createAtlasEdge(hubNode.id, node.id, "contains", nodeLookup, false, "mechanism"));
+      }
+    }
   });
 
-  pathwayPairs.forEach(pair => {
-    const [source, target] = pair.split("::");
-    const key = `${source}:${target}`;
-    if (rendered.some(edge => edge.key === key)) return;
+  const pathwayPairs = [];
+  for (let index = 0; index < activePathway.nodeIds.length - 1; index += 1) {
+    pathwayPairs.push([activePathway.nodeIds[index], activePathway.nodeIds[index + 1]]);
+  }
 
-    const sourceNode = nodeLookup.get(source);
-    const targetNode = nodeLookup.get(target);
-    if (!sourceNode || !targetNode) return;
-
-    rendered.push(adaptEdgeForAtlas({
-      source,
-      target,
-      relationship: "influences",
-      explanation: `${sourceNode.label} influences ${targetNode.label}.`
-    }, nodeLookup, pathwayPairs));
+  pathwayPairs.forEach(([source, target]) => {
+    if (!nodeLookup.has(source) || !nodeLookup.has(target)) return;
+    addEdge(createAtlasEdge(source, target, "pathway", nodeLookup, true, "pathway"));
   });
 
-  return rendered;
+  if (mode === "atlas") {
+    graph.edges.forEach(edge => {
+      if (!nodeLookup.has(edge.source) || !nodeLookup.has(edge.target)) return;
+      if (Math.abs(nodeLookup.get(edge.source).x - nodeLookup.get(edge.target).x) > 820) return;
+      addEdge(createAtlasEdge(edge.source, edge.target, edge.relationship, nodeLookup, false, "graph", edge.explanation));
+    });
+  }
+
+  return edges;
 }
 
-function adaptEdgeForAtlas(edge, nodeLookup, pathwayPairs) {
-  const source = nodeLookup.get(edge.source);
-  const target = nodeLookup.get(edge.target);
-  const isPathway = pathwayPairs.has(`${edge.source}::${edge.target}`);
+function createAtlasEdge(sourceId, targetId, relationship, nodeLookup, isPathway, kind, explanation = "") {
+  const source = nodeLookup.get(sourceId);
+  const target = nodeLookup.get(targetId);
 
   return {
-    id: `${edge.source}-${edge.target}-${edge.relationship || "edge"}`,
-    key: `${edge.source}:${edge.target}`,
-    source: edge.source,
-    target: edge.target,
-    relationship: edge.relationship || "related_to",
-    explanation: edge.explanation || `${source?.label || edge.source} influences ${target?.label || edge.target}.`,
-    path: buildCurve(source, target),
+    id: `${sourceId}-${targetId}-${kind}`,
+    source: sourceId,
+    target: targetId,
+    relationship,
     isPathway,
-    color: isPathway ? source?.color || "#6d7389" : "#b9b2a9"
+    kind,
+    color: isPathway ? "#223447" : "#b7ab99",
+    path: buildCurve(source, target, kind),
+    explanation:
+      explanation ||
+      `${source?.baseLabel || sourceId} ${formatLabel(relationship)} ${target?.baseLabel || targetId}.`
   };
 }
 
-function buildCurve(source, target) {
+function buildCurve(source, target, kind) {
   if (!source || !target) return "";
 
-  const dx = target.x - source.x;
-  const curvature = Math.max(65, Math.abs(dx) * 0.25);
+  const midX = (source.x + target.x) / 2;
+  const lift = kind === "pathway"
+    ? Math.max(42, Math.abs(source.x - target.x) * 0.18)
+    : Math.max(22, Math.abs(source.x - target.x) * 0.1);
 
-  return `M ${source.x} ${source.y} C ${source.x} ${source.y + curvature}, ${target.x} ${target.y - curvature}, ${target.x} ${target.y}`;
+  let control1Y = source.y;
+  let control2Y = target.y;
+
+  if (source.y < target.y) {
+    control1Y += lift;
+    control2Y -= lift;
+  } else {
+    control1Y -= lift;
+    control2Y += lift;
+  }
+
+  return `M ${source.x} ${source.y} C ${midX} ${control1Y}, ${midX} ${control2Y}, ${target.x} ${target.y}`;
+}
+
+function buildNodeDetails(graph, node, diagnosis) {
+  if (!node) return null;
+
+  if (node.isSynthetic) {
+    return {
+      label: node.baseLabel,
+      description: node.description,
+      coaching: node.coaching,
+      relationships: [],
+      interventions: diagnosis?.recommendationPackage?.tacticalLevers?.map(lever => lever.label) || [],
+      evidence: diagnosis?.likelyIssues || []
+    };
+  }
+
+  const source = graph.nodeMap.get(node.id) || {};
+  const outgoing = (graph.outgoing.get(node.id) || []).slice(0, 5);
+  const incoming = (graph.incoming.get(node.id) || []).slice(0, 5);
+
+  return {
+    label: node.baseLabel,
+    description: node.description,
+    coaching: node.coaching,
+    relationships: [
+      ...outgoing.map(edge => ({
+        label: `${node.baseLabel} ${formatLabel(edge.relationship)} ${graph.nodeMap.get(edge.target)?.label || formatLabel(edge.target)}`,
+        explanation: edge.explanation
+      })),
+      ...incoming.map(edge => ({
+        label: `${graph.nodeMap.get(edge.source)?.label || formatLabel(edge.source)} ${formatLabel(edge.relationship)} ${node.baseLabel}`,
+        explanation: edge.explanation
+      }))
+    ].slice(0, 7),
+    interventions: source.interventions || [],
+    evidence: source.observedBy || source.influencedBy || []
+  };
 }
 
 function resolvePathways(graph, diagnosis) {
@@ -332,23 +450,27 @@ function resolvePathways(graph, diagnosis) {
 
   const matched = PATHWAY_LIBRARY.filter(pathway =>
     pathway.match.some(term => evidenceText.includes(term))
-  ).map(pathway => hydratePathway(graph, pathway));
+  ).map(pathway => ({
+    ...pathway,
+    nodeIds: pathway.nodeIds.filter(nodeId => graph.nodeMap.has(nodeId))
+  }));
 
-  if (matched.length) {
-    return dedupePathways(matched);
-  }
-
-  return [hydratePathway(graph, PATHWAY_LIBRARY[0])];
+  if (matched.length) return dedupePathways(matched);
+  return [createFallbackPathway(graph)];
 }
 
-function hydratePathway(graph, pathway) {
-  const nodeIds = pathway.nodeIds.filter(nodeId => graph.nodeMap.has(nodeId));
-
+function createFallbackPathway(graph) {
   return {
-    id: pathway.id,
-    label: pathway.label,
-    narrative: pathway.narrative,
-    nodeIds
+    id: "pathway_fallback",
+    label: "Core fat-loss pathway",
+    narrative:
+      "Energy intake, system regulation, and visible scale behaviour form the core explanatory line when no stronger pattern dominates.",
+    nodeIds: [
+      "energy_intake",
+      "energy_balance",
+      "fat_mass",
+      "body_weight_trend"
+    ].filter(nodeId => graph.nodeMap.has(nodeId))
   };
 }
 
@@ -363,58 +485,8 @@ function dedupePathways(pathways) {
   });
 }
 
-function createFallbackPathway(graph) {
-  const fallbackIds = [
-    "energy_intake",
-    "energy_balance",
-    "fat_mass",
-    "body_weight_trend"
-  ].filter(nodeId => graph.nodeMap.has(nodeId));
-
-  return {
-    id: "pathway_fallback",
-    label: "Core fat-loss pathway",
-    narrative:
-      "Energy intake, balance, and body-mass outcomes form the core explanatory line when no more specific pathway has been selected.",
-    nodeIds: fallbackIds
-  };
-}
-
-function buildNodeDetails(graph, node) {
-  if (!node) return null;
-
-  const source = graph.nodeMap.get(node.id) || {};
-  const outgoing = (graph.outgoing.get(node.id) || []).slice(0, 6);
-  const incoming = (graph.incoming.get(node.id) || []).slice(0, 6);
-
-  return {
-    id: node.id,
-    label: node.label,
-    description: node.description,
-    coaching: node.coaching,
-    relationships: [
-      ...outgoing.map(edge => ({
-        direction: "influences",
-        label: `${node.baseLabel} ${formatLabel(edge.relationship)} ${graph.nodeMap.get(edge.target)?.label || formatLabel(edge.target)}`,
-        explanation: edge.explanation
-      })),
-      ...incoming.map(edge => ({
-        direction: "is shaped by",
-        label: `${graph.nodeMap.get(edge.source)?.label || formatLabel(edge.source)} ${formatLabel(edge.relationship)} ${node.baseLabel}`,
-        explanation: edge.explanation
-      }))
-    ].slice(0, 8),
-    interventions: source.interventions || [],
-    evidence: source.observedBy || source.influencedBy || []
-  };
-}
-
-function buildSectionBands() {
-  return [
-    { id: "outcomes", label: "Outcomes", y: 90, height: 120 },
-    { id: "systems", label: "Major Systems", y: 280, height: 240 },
-    { id: "inputs", label: "Inputs", y: 640, height: 130 }
-  ];
+function findHubNode(nodeLookup, hubId) {
+  return Array.from(nodeLookup.values()).find(node => node.visualTier === "hub" && node.hubId === hubId) || null;
 }
 
 function formatLabel(value) {
