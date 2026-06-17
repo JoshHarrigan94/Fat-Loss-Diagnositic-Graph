@@ -280,9 +280,9 @@ function renderDynamicFocusPanel(x, y, width, height, details) {
       <text x="${x + 18}" y="${y + 28}" class="atlas-panel-title">CURRENT FOCUS</text>
       <text x="${x + 18}" y="${y + 56}" class="atlas-focus-title">${escapeHtml(details?.label || "Atlas node")}</text>
       ${renderPanelLines(x + 18, y + 82, wrapLines(details?.description || "", 28), "atlas-small-copy")}
-      <text x="${x + 18}" y="${y + 154}" class="atlas-panel-subtitle">Relationship traces</text>
+      <text x="${x + 18}" y="${y + 154}" class="atlas-panel-subtitle">Possible causes</text>
       ${renderPanelLines(x + 18, y + 174, relationshipLines.length ? relationshipLines : ["No direct traces."], "atlas-small-copy")}
-      <text x="${x + 18}" y="${y + 226}" class="atlas-panel-subtitle">Evidence traces</text>
+      <text x="${x + 18}" y="${y + 226}" class="atlas-panel-subtitle">Related pathways</text>
       ${renderPanelLines(x + 18, y + 246, evidenceLines.length ? evidenceLines : ["No attached traces."], "atlas-small-copy")}
     </g>
   `;
