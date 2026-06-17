@@ -5,9 +5,9 @@ import { getTodayDateString } from "./dataEntry.js";
 import { renderLineChart } from "./charts.js";
 
 const APP_PAGES = [
-  { id: "diagnostic", label: "Diagnostic View" },
-  { id: "atlas", label: "Atlas Hero View" },
-  { id: "pathway", label: "Pathway View" }
+  { id: "diagnostic", label: "Diagnostic" },
+  { id: "atlas", label: "Atlas" },
+  { id: "pathway", label: "Pathway" }
 ];
 
 const uiState = {
@@ -275,16 +275,24 @@ function renderDiagnosticPage(result, diagnosis, model) {
   const primary = diagnosis.recommendationPackage?.primary;
   const dominantSystems = getDominantSystems(model);
   const latestRow = getLatestRow(result.rawRows);
+  const confidence = diagnosis.confidenceProfile?.overall;
+  const evidence = result.report?.evidence || [];
 
   return `
-    <section class="page-flow">
-      <section class="atlas-hero-grid">
-        <article class="atlas-narrative-panel">
+    <section class="page-flow diagnostic-atlas-page">
+      <section class="diagnostic-atlas-stage">
+        <article class="diagnostic-atlas-brief">
           <p class="eyebrow">Diagnostic View</p>
           <h2>${escapeHtml(result.report?.diagnosis?.title || "No diagnosis available yet")}</h2>
           <p class="summary">${escapeHtml(result.report?.diagnosis?.summary || "Add data to generate a physiological read.")}</p>
 
-          <div class="atlas-chip-row">
+          <div class="diagnostic-ledger-strip">
+            <span><strong>${escapeHtml(confidence?.label || `${result.report?.diagnosis?.confidence || "N/A"}%`)}</strong> confidence</span>
+            <span><strong>${escapeHtml(primary?.label || "No active recommendation")}</strong> active response</span>
+            <span><strong>${escapeHtml(latestRow?.date || "No entries")}</strong> latest check-in</span>
+          </div>
+
+          <div class="atlas-chip-row diagnostic-chip-row">
             ${dominantSystems.map(system => atlasChip(system)).join("")}
           </div>
 
@@ -293,87 +301,88 @@ function renderDiagnosticPage(result, diagnosis, model) {
             <p>${escapeHtml(model.caption)}</p>
           </div>
 
-          <div class="atlas-recommendation-band">
+          <div class="atlas-recommendation-band diagnostic-recommendation-band">
             <div>
               <p class="eyebrow">Current recommendation</p>
               <h3>${escapeHtml(primary?.label || "No active recommendation")}</h3>
               <p>${escapeHtml(primary?.message || result.report?.recommendation || "No recommendation available.")}</p>
             </div>
-            <button class="primary-button" data-page="pathway">Open pathway view</button>
+            <div class="diagnostic-cta-row">
+              <button class="secondary-button" data-page="atlas">Open atlas</button>
+              <button class="primary-button" data-page="pathway">Trace reasoning</button>
+            </div>
           </div>
         </article>
 
-        <article class="atlas-mini-panel">
-          <div class="section-title">
-            <h2>Diagnostic atlas overlay</h2>
-            <span>Why the weight trend looks this way</span>
-          </div>
-          ${renderAtlasScene(model, { interactive: false, compact: true })}
-        </article>
+        <section class="diagnostic-atlas-canvas">
+          ${renderAtlasScene(model, { interactive: true })}
+        </section>
+
+        <aside class="diagnostic-atlas-rail">
+          <article class="atlas-field-note">
+            <div class="section-title atlas-section-title">
+              <h2>Observed state</h2>
+              <span>Current read</span>
+            </div>
+            <div class="atlas-stat-grid diagnostic-stat-grid">
+              ${atlasStat("Observed loss", `${format(result.analytics?.metrics?.observedLossPerWeek)} kg/wk`)}
+              ${atlasStat("Expected loss", `${format(result.analytics?.metrics?.expectedLossPerWeek)} kg/wk`)}
+              ${atlasStat("Weight volatility", `${format(result.analytics?.metrics?.weightVolatility)} kg`)}
+              ${atlasStat("Latest weight", latestRow ? `${format(latestRow.bodyweight_kg)} kg` : "N/A")}
+            </div>
+          </article>
+
+          <article class="atlas-field-note">
+            <div class="section-title atlas-section-title">
+              <h2>Evidence in play</h2>
+              <span>Signal trace</span>
+            </div>
+            <ul class="evidence-list atlas-evidence-list">
+              ${evidence.length
+                ? evidence.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
+                : "<li>No evidence items available.</li>"}
+            </ul>
+          </article>
+        </aside>
       </section>
 
-      <section class="atlas-info-grid">
-        <article class="panel atlas-text-panel">
-          <div class="section-title">
-            <h2>Observed state</h2>
-            <span>Current metrics</span>
-          </div>
-          <div class="atlas-stat-grid">
-            ${atlasStat("Observed loss", `${format(result.analytics?.metrics?.observedLossPerWeek)} kg/wk`)}
-            ${atlasStat("Expected loss", `${format(result.analytics?.metrics?.expectedLossPerWeek)} kg/wk`)}
-            ${atlasStat("Weight volatility", `${format(result.analytics?.metrics?.weightVolatility)} kg`)}
-            ${atlasStat("Latest weight", latestRow ? `${format(latestRow.bodyweight_kg)} kg` : "N/A")}
-          </div>
-        </article>
-
-        <article class="panel atlas-text-panel">
-          <div class="section-title">
-            <h2>Evidence in play</h2>
-            <span>Signals behind the read</span>
-          </div>
-          <ul class="evidence-list">
-            ${(result.report?.evidence || []).length
-              ? result.report.evidence.map(item => `<li>${escapeHtml(formatLabel(item))}</li>`).join("")
-              : "<li>No evidence items available.</li>"}
-          </ul>
-        </article>
-      </section>
-
-      <section class="panel atlas-trend-panel">
-        <div class="section-title">
+      <section class="diagnostic-lower-grid">
+        <article class="atlas-field-note atlas-trend-panel">
+          <div class="section-title atlas-section-title">
           <div>
-            <p class="eyebrow">Trend context</p>
-            <h2>Scale behaviour over time</h2>
+              <p class="eyebrow">Trend context</p>
+              <h2>Scale behaviour over time</h2>
+            </div>
+            <span>Signal continuity</span>
           </div>
-          <button class="secondary-button" data-page="atlas">Open atlas</button>
-        </div>
-        ${
-          result.chartData?.weightTrend?.length
-            ? renderLineChart({
-                title: "Weight trend",
-                subtitle: "Daily bodyweight with the smoothing layer used by the diagnostic engine.",
-                data: result.chartData.weightTrend,
-                yKey: "weight",
-                secondaryYKey: "rollingWeight",
-                yLabel: "Daily weight",
-                secondaryLabel: "7-day average",
-                valueSuffix: "kg"
-              })
-            : `<p class="summary small">Weight trend will appear after data is loaded.</p>`
-        }
-      </section>
+          ${
+            result.chartData?.weightTrend?.length
+              ? renderLineChart({
+                  title: "Weight trend",
+                  subtitle: "Daily bodyweight with the smoothing layer used by the diagnostic engine.",
+                  data: result.chartData.weightTrend,
+                  yKey: "weight",
+                  secondaryYKey: "rollingWeight",
+                  yLabel: "Daily weight",
+                  secondaryLabel: "7-day average",
+                  valueSuffix: "kg"
+                })
+              : `<p class="summary small">Weight trend will appear after data is loaded.</p>`
+          }
+        </article>
 
-      <section class="panel atlas-checkin-panel">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Check-in</p>
-            <h2>Update the live physiological map</h2>
+        <article class="atlas-field-note atlas-checkin-panel">
+          <div class="section-title atlas-section-title">
+            <div>
+              <p class="eyebrow">Check-in</p>
+              <h2>Update the live physiological map</h2>
+            </div>
+            <span>Static app, live diagnosis flow</span>
           </div>
-          <span>Static app, live diagnosis flow</span>
-        </div>
-        ${renderCheckInSummary(result.importSummary, result.importWarnings, latestRow)}
-        ${renderManualEntryPanel(result.entryErrors, result.entrySuccess)}
-        ${renderRecentEntries(result.rawRows)}
+          ${renderCheckInSummary(result.importSummary, result.importWarnings, latestRow)}
+          ${renderManualEntryPanel(result.entryErrors, result.entrySuccess)}
+          ${renderRecentEntries(result.rawRows)}
+        </article>
       </section>
     </section>
   `;
