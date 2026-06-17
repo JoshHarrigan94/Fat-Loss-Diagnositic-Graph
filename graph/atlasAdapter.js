@@ -144,7 +144,12 @@ export function buildAtlasViewModel({
     displayNodes.set(node.id, createMechanismNode(node, displayNodes));
   });
 
-  if (mode !== "diagnostic") {
+  if (mode === "atlas") {
+    gatherFullMapNodes(graph, displayNodes).forEach(node => {
+      if (displayNodes.has(node.id)) return;
+      displayNodes.set(node.id, createMechanismNode(node, displayNodes));
+    });
+  } else if (mode !== "diagnostic") {
     gatherAtlasNodes(graph, diagnosis, displayNodes).forEach(node => {
       if (displayNodes.has(node.id)) return;
       displayNodes.set(node.id, createMechanismNode(node, displayNodes));
@@ -255,9 +260,8 @@ function resolveManifestNode(graph, manifest, visualTier) {
 function createMechanismNode(node, displayNodes) {
   const hubId = inferAtlasHubId(node);
   const hub = getHubManifest(hubId);
-  const offsets = getHubOffsets(hubId);
   const siblings = Array.from(displayNodes.values()).filter(item => item.hubId === hubId && item.visualTier === "mechanism").length;
-  const offset = offsets[siblings % offsets.length];
+  const offset = getMechanismOffset(hubId, siblings);
 
   return {
     id: node.id,
@@ -297,6 +301,29 @@ function gatherAtlasNodes(graph, diagnosis, displayNodes) {
     .map(nodeId => graph.nodeMap.get(nodeId))
     .filter(Boolean)
     .filter(node => !displayNodes.has(node.id));
+}
+
+function gatherFullMapNodes(graph, displayNodes) {
+  return graph.nodes
+    .filter(node => !displayNodes.has(node.id))
+    .filter(isAtlasEligibleNode)
+    .sort((left, right) => String(left.id).localeCompare(String(right.id)));
+}
+
+function isAtlasEligibleNode(node = {}) {
+  const type = String(node.type || "").toLowerCase();
+
+  if ([
+    "strategy",
+    "recommendation",
+    "recommendation_mode",
+    "intervention",
+    "tactical_lever"
+  ].includes(type)) {
+    return false;
+  }
+
+  return true;
 }
 
 function buildEdges({
@@ -410,31 +437,43 @@ function buildNodeDetails(graph, node, diagnosis) {
       description: node.description,
       coaching: node.coaching,
       relationships: [],
+      causes: [],
+      consequences: [],
       interventions: diagnosis?.recommendationPackage?.tacticalLevers?.map(lever => lever.label) || [],
-      evidence: diagnosis?.likelyIssues || []
+      evidence: diagnosis?.likelyIssues || [],
+      relatedPathways: diagnosis?.likelyIssues || []
     };
   }
 
   const source = graph.nodeMap.get(node.id) || {};
   const outgoing = (graph.outgoing.get(node.id) || []).slice(0, 5);
   const incoming = (graph.incoming.get(node.id) || []).slice(0, 5);
+  const consequences = outgoing.map(edge => ({
+    label: `${node.baseLabel} ${formatLabel(edge.relationship)} ${graph.nodeMap.get(edge.target)?.label || formatLabel(edge.target)}`,
+    explanation: edge.explanation
+  }));
+  const causes = incoming.map(edge => ({
+    label: `${graph.nodeMap.get(edge.source)?.label || formatLabel(edge.source)} ${formatLabel(edge.relationship)} ${node.baseLabel}`,
+    explanation: edge.explanation
+  }));
+  const relatedPathways = [
+    ...(source.observedBy || []),
+    ...(source.influencedBy || [])
+  ];
 
   return {
     label: node.baseLabel,
     description: node.description,
     coaching: node.coaching,
     relationships: [
-      ...outgoing.map(edge => ({
-        label: `${node.baseLabel} ${formatLabel(edge.relationship)} ${graph.nodeMap.get(edge.target)?.label || formatLabel(edge.target)}`,
-        explanation: edge.explanation
-      })),
-      ...incoming.map(edge => ({
-        label: `${graph.nodeMap.get(edge.source)?.label || formatLabel(edge.source)} ${formatLabel(edge.relationship)} ${node.baseLabel}`,
-        explanation: edge.explanation
-      }))
+      ...consequences,
+      ...causes
     ].slice(0, 7),
+    causes: causes.slice(0, 4),
+    consequences: consequences.slice(0, 4),
     interventions: source.interventions || [],
-    evidence: source.observedBy || source.influencedBy || []
+    evidence: relatedPathways,
+    relatedPathways: relatedPathways.slice(0, 6)
   };
 }
 
@@ -487,6 +526,23 @@ function dedupePathways(pathways) {
 
 function findHubNode(nodeLookup, hubId) {
   return Array.from(nodeLookup.values()).find(node => node.visualTier === "hub" && node.hubId === hubId) || null;
+}
+
+function getMechanismOffset(hubId, index) {
+  const seedOffsets = getHubOffsets(hubId);
+  if (index < seedOffsets.length) return seedOffsets[index];
+
+  const radiusBase = 138;
+  const ring = Math.floor((index - seedOffsets.length) / 10) + 1;
+  const position = (index - seedOffsets.length) % 10;
+  const angle = ((Math.PI * 2) / 10) * position - (Math.PI / 2);
+  const radiusX = radiusBase + (ring * 34);
+  const radiusY = radiusBase + (ring * 26);
+
+  return [
+    Math.round(Math.cos(angle) * radiusX),
+    Math.round(Math.sin(angle) * radiusY)
+  ];
 }
 
 function formatLabel(value) {

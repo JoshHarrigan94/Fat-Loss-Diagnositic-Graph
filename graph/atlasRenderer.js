@@ -2,7 +2,10 @@ export function renderAtlasScene(model, options = {}) {
   const {
     interactive = true,
     compact = false,
-    pathwayMode = false
+    pathwayMode = false,
+    railMode = "full",
+    labelMode = "always",
+    interactionProfile = "default"
   } = options;
 
   const selectedId = model.selectedNode?.id || "";
@@ -13,17 +16,17 @@ export function renderAtlasScene(model, options = {}) {
     <section class="atlas-shell ${compact ? "atlas-shell-compact" : ""}">
       <div class="atlas-frame atlas-frame-poster">
         <svg
-          class="atlas-svg atlas-svg-poster ${pathwayMode ? "atlas-svg-pathway" : ""}"
+          class="atlas-svg atlas-svg-poster ${pathwayMode ? "atlas-svg-pathway" : ""} atlas-svg-${interactionProfile}"
           viewBox="0 0 ${model.viewBox.width} ${model.viewBox.height}"
           preserveAspectRatio="xMidYMid meet"
-          ${interactive ? 'data-atlas-root="true"' : ""}
+          ${interactive ? `data-atlas-root="true" data-interaction-profile="${escapeHtml(interactionProfile)}"` : ""}
         >
           ${renderDefinitions()}
           ${renderPosterPaper(model)}
-          ${renderPosterRails(model.poster, details)}
+          ${railMode === "full" ? renderPosterRails(model.poster, details) : ""}
           ${model.edges.map(edge => renderEdge(edge, selectedId)).join("")}
-          ${renderPosterLabels(model)}
-          ${model.nodes.map(node => renderNode(node, selectedId, activeNodeIds, interactive)).join("")}
+          ${renderPosterLabels(model, labelMode)}
+          ${model.nodes.map(node => renderNode(node, selectedId, activeNodeIds, interactive, labelMode)).join("")}
         </svg>
       </div>
       ${
@@ -107,7 +110,9 @@ function renderPosterRails(poster, details) {
   `;
 }
 
-function renderPosterLabels(model) {
+function renderPosterLabels(model, labelMode) {
+  if (labelMode !== "always") return "";
+
   const rendered = [];
 
   model.nodes.forEach(node => {
@@ -155,7 +160,7 @@ function renderEdge(edge, selectedId) {
   `;
 }
 
-function renderNode(node, selectedId, activeNodeIds, interactive) {
+function renderNode(node, selectedId, activeNodeIds, interactive, labelMode) {
   const classes = [
     "atlas-node",
     `atlas-node-${node.visualTier}`,
@@ -175,7 +180,7 @@ function renderNode(node, selectedId, activeNodeIds, interactive) {
         <circle r="78" class="atlas-hub-aura" />
         <circle r="56" class="atlas-hub-core" stroke="${escapeHtml(node.color)}" />
         <text class="atlas-hub-icon" text-anchor="middle" y="-6">${escapeHtml(node.icon || "")}</text>
-        <text class="atlas-hub-label" text-anchor="middle" y="14">${renderMultilineSvgText(node.label)}</text>
+        ${renderInteractionLabel(node, "atlas-hub-label atlas-node-reveal-label", 14)}
       </g>
     `;
   }
@@ -185,7 +190,9 @@ function renderNode(node, selectedId, activeNodeIds, interactive) {
       <g class="${classes}" transform="translate(${node.x}, ${node.y})" ${baseAttrs}>
         <circle r="102" class="atlas-center-aura" />
         <circle r="76" class="atlas-center-core" />
-        <text class="atlas-center-label" text-anchor="middle" y="-4">${renderMultilineSvgText(node.label)}</text>
+        ${labelMode === "always"
+          ? `<text class="atlas-center-label" text-anchor="middle" y="-4">${renderMultilineSvgText(node.label)}</text>`
+          : renderInteractionLabel(node, "atlas-center-label atlas-node-reveal-label", -4)}
       </g>
     `;
   }
@@ -195,6 +202,7 @@ function renderNode(node, selectedId, activeNodeIds, interactive) {
       <g class="${classes}" transform="translate(${node.x}, ${node.y})" ${baseAttrs}>
         <circle r="5" fill="${escapeHtml(node.color)}" />
         <circle r="14" class="atlas-mechanism-ring" stroke="${escapeHtml(node.color)}" />
+        ${renderInteractionLabel(node, "atlas-mechanism-label atlas-node-reveal-label", -18, false)}
       </g>
     `;
   }
@@ -203,6 +211,9 @@ function renderNode(node, selectedId, activeNodeIds, interactive) {
     return `
       <g class="${classes}" transform="translate(${node.x}, ${node.y})" ${baseAttrs}>
         <circle r="7" class="atlas-input-dot" />
+        ${labelMode === "always"
+          ? ""
+          : renderInteractionLabel(node, "atlas-input-label atlas-node-reveal-label", -16, false, node.caption)}
       </g>
     `;
   }
@@ -211,11 +222,29 @@ function renderNode(node, selectedId, activeNodeIds, interactive) {
     return `
       <g class="${classes}" transform="translate(${node.x}, ${node.y})" ${baseAttrs}>
         <circle r="7" class="atlas-outcome-dot" />
+        ${labelMode === "always"
+          ? ""
+          : renderInteractionLabel(node, "atlas-outcome-label atlas-node-reveal-label", -16, false, node.caption)}
       </g>
     `;
   }
 
   return "";
+}
+
+function renderInteractionLabel(node, className, y, multiline = true, caption = "") {
+  const title = multiline ? renderMultilineSvgText(node.label) : escapeHtml(node.label);
+  const titleBlock = `<text class="${className}" text-anchor="middle" y="${y}">${title}</text>`;
+  const captionBlock = caption
+    ? `<text class="atlas-node-reveal-caption" text-anchor="middle" y="${y + 18}">${escapeHtml(caption)}</text>`
+    : "";
+
+  return `
+    <g class="atlas-node-reveal">
+      ${titleBlock}
+      ${captionBlock}
+    </g>
+  `;
 }
 
 function renderLabeledPanel(x, y, width, height, title, items, ordered = false) {
