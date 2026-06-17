@@ -227,14 +227,24 @@ function bindAtlasHover() {
 }
 
 function applyAtlasHover(root, nodeId) {
+  const interactionProfile = root.getAttribute("data-interaction-profile") || "default";
   const directNodes = new Set([nodeId]);
+  const activePathNodes = new Set(
+    Array.from(root.querySelectorAll(".atlas-node.is-active-path"))
+      .map(node => node.getAttribute("data-atlas-node"))
+      .filter(Boolean)
+  );
 
   root.querySelectorAll("[data-edge-source]").forEach(edge => {
     const source = edge.getAttribute("data-edge-source");
     const target = edge.getAttribute("data-edge-target");
     const isDirect = source === nodeId || target === nodeId;
+    const isActivePathEdge =
+      activePathNodes.has(source) &&
+      activePathNodes.has(target);
     edge.classList.toggle("is-hover-direct", isDirect);
-    edge.classList.toggle("is-faded", !isDirect);
+    edge.classList.toggle("is-active-context", isActivePathEdge);
+    edge.classList.toggle("is-faded", !isDirect && !isActivePathEdge);
 
     if (isDirect) {
       directNodes.add(source);
@@ -244,15 +254,29 @@ function applyAtlasHover(root, nodeId) {
 
   root.querySelectorAll("[data-atlas-node]").forEach(node => {
     const currentId = node.getAttribute("data-atlas-node");
-    node.classList.toggle("is-hover-direct", directNodes.has(currentId));
-    node.classList.toggle("is-faded", !directNodes.has(currentId));
+    const isDirectNode = directNodes.has(currentId);
+    const isActivePathNode = activePathNodes.has(currentId);
+    const shouldRevealLabel = interactionProfile === "why"
+      ? isDirectNode || isActivePathNode
+      : isActivePathNode;
+
+    node.classList.toggle("is-hover-direct", isDirectNode);
+    node.classList.toggle("is-active-context", isActivePathNode);
+    node.classList.toggle("is-label-reveal", shouldRevealLabel);
+    node.classList.toggle("is-faded", !isDirectNode && !isActivePathNode);
   });
+
+  root.classList.add("is-hovering-context");
 }
 
 function clearAtlasHover(root) {
   root.querySelectorAll(".is-hover-direct, .is-faded").forEach(node => {
     node.classList.remove("is-hover-direct", "is-faded");
   });
+  root.querySelectorAll(".is-active-context, .is-label-reveal").forEach(node => {
+    node.classList.remove("is-active-context", "is-label-reveal");
+  });
+  root.classList.remove("is-hovering-context");
 }
 
 function renderPage(currentPage, result, diagnosis, models) {
@@ -517,7 +541,7 @@ function renderWhyPage(result, diagnosis, model) {
         </article>
       </section>
 
-      ${renderAtlasScene(model, { interactive: true, pathwayMode: true })}
+      ${renderAtlasScene(model, { interactive: true, pathwayMode: true, railMode: "full", labelMode: "hover-selection", interactionProfile: "why" })}
     </section>
   `;
 }
@@ -529,7 +553,7 @@ function renderMapPage(result, diagnosis, model) {
     <section class="page-flow map-page">
       <section class="map-explorer-layout">
         <div class="map-explorer-canvas">
-          ${renderAtlasScene(model, { interactive: true })}
+          ${renderAtlasScene(model, { interactive: true, railMode: "reduced", labelMode: "hover-selection", interactionProfile: "map" })}
         </div>
         <aside class="map-explorer-rail">
           <article class="atlas-field-note">
@@ -537,7 +561,7 @@ function renderMapPage(result, diagnosis, model) {
               <h2>${escapeHtml(details.label || "Current focus")}</h2>
               <span>Selected mechanism</span>
             </div>
-            <p class="summary small">${escapeHtml(details.description || "Select a part of the map to inspect what it means.")}</p>
+            <p class="summary small">${escapeHtml(details.description || "Select a node to inspect what it means inside the wider system.")}</p>
           </article>
 
           <article class="atlas-field-note">
@@ -546,7 +570,7 @@ function renderMapPage(result, diagnosis, model) {
               <span>What may drive it</span>
             </div>
             <ul class="evidence-list atlas-evidence-list">
-              ${renderListOrFallback((details.relationships || []).slice(0, 3).map(item => item.label), "No clear upstream relationships yet.")}
+              ${renderListOrFallback((details.causes || []).slice(0, 4).map(item => item.label), "No clear upstream relationships yet.")}
             </ul>
           </article>
 
@@ -555,7 +579,9 @@ function renderMapPage(result, diagnosis, model) {
               <h2>Consequences</h2>
               <span>What it may influence</span>
             </div>
-            <p class="summary small">${escapeHtml(details.coaching || "Use the connected pathways to understand downstream effects.")}</p>
+            <ul class="evidence-list atlas-evidence-list">
+              ${renderListOrFallback((details.consequences || []).slice(0, 4).map(item => item.label), "No clear downstream effects yet.")}
+            </ul>
           </article>
 
           <article class="atlas-field-note">
@@ -564,7 +590,7 @@ function renderMapPage(result, diagnosis, model) {
               <span>Evidence traces</span>
             </div>
             <ul class="evidence-list atlas-evidence-list">
-              ${renderListOrFallback((details.evidence || []).slice(0, 4).map(formatLabel), "No related pathway evidence attached.")}
+              ${renderListOrFallback((details.relatedPathways || []).slice(0, 6).map(formatLabel), "No related pathway evidence attached.")}
             </ul>
           </article>
         </aside>
